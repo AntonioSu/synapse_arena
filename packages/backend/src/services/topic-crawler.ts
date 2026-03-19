@@ -8,19 +8,24 @@ import { v4 as uuidv4 } from 'uuid';
 class TopicCrawlerService {
   async fetchAndProcessTopics() {
     try {
-      console.log('🕷️  Fetching hot topics from Zhihu...');
+      console.log('🕷️  Fetching hot topics from Zhihu billboard...');
 
-      // 1. 获取知乎热榜
-      const billboardData = await zhihuAPI.getBillboard(50, 24);
+      // 1. 获取知乎热榜前3个话题
+      const billboardData = await zhihuAPI.getBillboard(3, 24);
       const hotTopics = billboardData.data.list;
 
-      console.log(`✅ Fetched ${hotTopics.length} hot topics`);
+      if (!hotTopics || hotTopics.length === 0) {
+        console.log('⚠️  No hot topics fetched');
+        return [];
+      }
+
+      console.log(`✅ Fetched ${hotTopics.length} hot topics from billboard`);
 
       // 缓存热榜数据
       await redisClient.setCachedHotTopics(hotTopics, 3600);
 
-      // 2. AI筛选争议性话题
-      console.log('🤖 AI selecting controversial topics...');
+      // 2. AI筛选并生成可辩论的话题（正方 + 反方立场）
+      console.log('🤖 AI selecting controversial topics and generating debate stances...');
       const selectedTopics = await aiService.selectControversialTopics(
         hotTopics.map((t) => ({
           title: t.title,
@@ -29,11 +34,29 @@ class TopicCrawlerService {
         }))
       );
 
-      console.log(`✅ Selected ${selectedTopics.length} controversial topics`);
+      console.log(`✅ AI selected ${selectedTopics.length} controversial topics`);
 
-      // 3. 存入数据库
+      // 3. 检查现有话题数量，补充到合理数量
+      const existingResult = await db.query(
+        `SELECT COUNT(*) as count FROM topics WHERE status = 'active'`
+      );
+      const existingCount = parseInt(existingResult.rows[0]?.count || '0');
+      console.log(`📊 Currently ${existingCount} active topics in database`);
+
+      // 4. 存入数据库（补充新话题）
       const topicIds: string[] = [];
-      for (const topic of selectedTopics.slice(0, 10)) {
+      for (const topic of selectedTopics) {
+        // 检查是否已存在相似标题
+        const duplicateCheck = await db.query(
+          `SELECT topic_id FROM topics WHERE title = $1`,
+          [topic.title]
+        );
+
+        if (duplicateCheck.rows.length > 0) {
+          console.log(`⏭️  Skipping duplicate topic: ${topic.title}`);
+          continue;
+        }
+
         const topicId = uuidv4();
         await db.query(
           `INSERT INTO topics (topic_id, title, pro_stance, con_stance, heat_score, status)
@@ -66,6 +89,9 @@ class TopicCrawlerService {
         console.log(`✅ Created topic: ${topic.title}`);
       }
 
+      const finalCount = existingCount + topicIds.length;
+      console.log(`📊 Total active topics: ${finalCount} (added ${topicIds.length})`);
+
       return topicIds;
     } catch (error) {
       console.error('❌ Topic crawling failed:', error);
@@ -74,8 +100,8 @@ class TopicCrawlerService {
   }
 
   startCronJob() {
-    // 每天早上8点执行
-    cron.schedule('0 8 * * *', async () => {
+    // 每天执行3次：早上8点、下午2点、晚上8点
+    cron.schedule('0 8,14,20 * * *', async () => {
       console.log('⏰ Cron job triggered: Fetching daily topics');
       try {
         await this.fetchAndProcessTopics();
@@ -84,7 +110,7 @@ class TopicCrawlerService {
       }
     });
 
-    console.log('✅ Topic crawler cron job started (daily at 8:00 AM)');
+    console.log('✅ Topic crawler cron job started (3 times daily: 8:00, 14:00, 20:00)');
   }
 }
 
