@@ -16,8 +16,8 @@ export const config = {
   },
   
   zhihu: {
-    appKey: process.env.ZHIHU_APP_KEY || 'stan-saber',
-    appSecret: process.env.ZHIHU_APP_SECRET || 'mjcgMVerUfH5H6gzmuiAKSdxQk2IH3SH',
+    appKey: process.env.ZHIHU_APP_KEY || '',
+    appSecret: process.env.ZHIHU_APP_SECRET || '',
     baseURL: 'https://openapi.zhihu.com',
     ringIds: ['2001009660925334090', '2015023739549529606'],
   },
