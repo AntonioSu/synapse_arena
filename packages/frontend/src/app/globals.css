@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-mono;
+    background: #000;
+    overflow-x: hidden;
+  }
+
+  /* 赛博扫描线效果 */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+      repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+      ),
+      linear-gradient(
+        rgba(0, 217, 255, 0.03) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        rgba(0, 217, 255, 0.03) 1px,
+        transparent 1px
+      );
+    background-size: 100% 100%, 50px 50px, 50px 50px;
+    pointer-events: none;
+    z-index: 9999;
+    animation: flicker 0.15s infinite;
+  }
+
+  /* 滚动条样式 */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 217, 255, 0.3);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 217, 255, 0.5);
+  }
+}
+
+@layer components {
+  /* 幽灵按钮 */
+  .cyber-button {
+    @apply relative px-6 py-2;
+    @apply bg-black/5 backdrop-blur-sm;
+    @apply border border-cyan-400/50;
+    @apply transition-all duration-300;
+    @apply text-cyan-300 text-sm;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  }
+
+  .cyber-button:hover {
+    @apply border-cyan-400;
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+  }
+
+  .cyber-button.primary {
+    @apply border-cyan-400 text-cyan-400;
+  }
+
+  .cyber-button.danger {
+    @apply border-red-500 text-red-500;
+  }
+
+  .cyber-button.danger:hover {
+    @apply border-red-400;
+    box-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
+  }
+
+  /* 赛博卡片 */
+  .cyber-card {
+    @apply bg-black/80 backdrop-blur-sm;
+    @apply border border-cyan-400/20;
+    @apply relative;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  }
+
+  /* 文字发光 */
+  .text-glow {
+    text-shadow: 0 0 10px currentColor;
+  }
+
+  /* 进度条 */
+  .progress-bar {
+    @apply h-2 bg-gradient-to-r relative overflow-hidden;
+  }
+
+  .progress-bar::after {
+    content: '';
+    @apply absolute inset-0;
+    @apply bg-white/20;
+    animation: scan 2s linear infinite;
+  }
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.95; }
+}
+
+@keyframes scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Loading animation */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.8;
+    filter: brightness(1.2);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
