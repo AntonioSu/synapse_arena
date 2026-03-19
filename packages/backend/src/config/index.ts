@@ -34,4 +34,10 @@ export const config = {
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
   },
+  
+  minimax: {
+    apiKey: process.env.MINIMAX_API_KEY || '',
+    groupId: process.env.MINIMAX_GROUP_ID || '',
+    baseURL: 'https://api.minimax.chat/v1',
+  },
 };

@@ -6,7 +6,7 @@ class RedisClient {
 
   constructor() {
     this.client = new Redis(config.redis.url, {
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: null,
       retryStrategy: (times) => {
         const delay = Math.min(times * 50, 2000);
         return delay;

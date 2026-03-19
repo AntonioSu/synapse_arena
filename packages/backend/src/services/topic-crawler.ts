@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { zhihuAPI } from './zhihu-api';
-import { openaiService } from './openai-service';
+import { aiService } from './minimax-service';
 import { db } from '../db/client';
 import { redisClient } from './redis-client';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,7 +21,7 @@ class TopicCrawlerService {
 
       // 2. AI筛选争议性话题
       console.log('🤖 AI selecting controversial topics...');
-      const selectedTopics = await openaiService.selectControversialTopics(
+      const selectedTopics = await aiService.selectControversialTopics(
         hotTopics.map((t) => ({
           title: t.title,
           body: t.body,

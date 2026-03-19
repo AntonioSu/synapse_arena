@@ -1,5 +1,5 @@
 import { db } from '../db/client';
-import { openaiService } from './openai-service';
+import { aiService } from './minimax-service';
 import { v4 as uuidv4 } from 'uuid';
 
 interface NPC {
@@ -59,7 +59,7 @@ class ColdStartService {
         const replyTo = comments.length > 0 ? comments[comments.length - 1].content : undefined;
 
         // 生成AI回复
-        const content = await openaiService.generateNPCResponse({
+        const content = await aiService.generateNPCResponse({
           npcPrompt: currentNPC.system_prompt,
           topicTitle: topic.title,
           stance,
@@ -102,7 +102,7 @@ class ColdStartService {
     const topicResult = await db.query(`SELECT title FROM topics WHERE topic_id = $1`, [topicId]);
     const topicTitle = topicResult.rows[0]?.title || '';
 
-    const judgement = await openaiService.judgeDebate({
+    const judgement = await aiService.judgeDebate({
       topicTitle,
       proComments,
       conComments,

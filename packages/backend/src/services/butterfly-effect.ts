@@ -1,7 +1,7 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { redisClient } from './redis-client';
 import { db } from '../db/client';
-import { openaiService } from './openai-service';
+import { aiService } from './minimax-service';
 import { v4 as uuidv4 } from 'uuid';
 import { io } from '../index';
 
@@ -140,7 +140,7 @@ class ButterflyEffectService {
     const npc = npcResult.rows[0];
 
     // 生成反击内容
-    const content = await openaiService.generateNPCResponse({
+    const content = await aiService.generateNPCResponse({
       npcPrompt: npc.system_prompt,
       topicTitle,
       stance,
@@ -187,7 +187,7 @@ class ButterflyEffectService {
     const npc = npcResult.rows[0];
 
     // 生成支援内容
-    const content = await openaiService.generateNPCResponse({
+    const content = await aiService.generateNPCResponse({
       npcPrompt: npc.system_prompt,
       topicTitle,
       stance,
@@ -237,7 +237,7 @@ class ButterflyEffectService {
     const proComments = proCommentsResult.rows;
     const conComments = conCommentsResult.rows;
 
-    const judgement = await openaiService.judgeDebate({
+    const judgement = await aiService.judgeDebate({
       topicTitle,
       proComments,
       conComments,

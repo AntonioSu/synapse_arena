@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/client';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { openaiService } from '../services/openai-service';
+import { aiService } from '../services/minimax-service';
 import { butterflyEffect } from '../services/butterfly-effect';
 import { io } from '../index';
 
@@ -122,7 +122,7 @@ router.post('/ai-assist', async (req, res) => {
     const recentComments = commentsResult.rows;
 
     // 生成AI回复
-    const content = await openaiService.generateUserAIResponse({
+    const content = await aiService.generateUserAIResponse({
       softMemory,
       topicTitle,
       stance,

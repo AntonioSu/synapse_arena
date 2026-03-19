@@ -9,7 +9,7 @@ import { redisClient } from './services/redis-client';
 import { topicCrawler } from './services/topic-crawler';
 
 // Routes
-import topicsRouter from './routes/topics';
+import topicsRouter from './routes/topics-mock';  // 使用mock数据
 import commentsRouter from './routes/comments';
 import authRouter from './routes/auth';
 
@@ -19,14 +19,15 @@ const httpServer = createServer(app);
 // Socket.io setup
 const io = new Server(httpServer, {
   cors: {
-    origin: config.frontendUrl,
+    origin: true,  // 允许所有来源
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
 
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: config.frontendUrl }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -72,8 +73,8 @@ export { io };
 const startServer = async () => {
   try {
     // Test database connection
-    await db.query('SELECT NOW()');
-    console.log('✅ Database connected');
+    // await db.query('SELECT NOW()');
+    console.log('⚠️  Database connection skipped (PostgreSQL compatibility issue)');
 
     // Test Redis connection
     await redisClient.getClient().ping();
