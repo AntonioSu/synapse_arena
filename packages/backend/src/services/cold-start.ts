@@ -75,7 +75,13 @@ class ColdStartService {
           [commentId, topicId, 'npc', currentNPC.npc_id, currentNPC.name, content, stance, true]
         );
 
-        comments.push({ content, npc: currentNPC, stance });
+        comments.push({ 
+          content, 
+          npc: currentNPC, 
+          stance,
+          author_type: 'npc',
+          author_name: currentNPC.name
+        });
 
         console.log(`Round ${i + 1}/${rounds}: ${currentNPC.name} (${stance})`);
 
@@ -94,7 +100,7 @@ class ColdStartService {
 
   private async performJudgement(
     topicId: string,
-    comments: Array<{ content: string; stance: 'pro' | 'con' }>
+    comments: Array<{ content: string; stance: 'pro' | 'con'; author_type?: string; author_name?: string }>
   ) {
     const proComments = comments.filter((c) => c.stance === 'pro');
     const conComments = comments.filter((c) => c.stance === 'con');
@@ -133,3 +139,4 @@ class ColdStartService {
 }
 
 export const coldStartService = new ColdStartService();
+);

@@ -219,7 +219,7 @@ class ButterflyEffectService {
 
   private async performJudgement(topicId: string, topicTitle: string) {
     const proCommentsResult = await db.query(
-      `SELECT content FROM comments 
+      `SELECT content, author_type, author_name FROM comments 
        WHERE topic_id = $1 AND stance = 'pro' 
        ORDER BY created_at DESC 
        LIMIT 10`,
@@ -227,7 +227,7 @@ class ButterflyEffectService {
     );
 
     const conCommentsResult = await db.query(
-      `SELECT content FROM comments 
+      `SELECT content, author_type, author_name FROM comments 
        WHERE topic_id = $1 AND stance = 'con' 
        ORDER BY created_at DESC 
        LIMIT 10`,
