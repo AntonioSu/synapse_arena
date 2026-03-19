@@ -33,14 +33,16 @@ export default function AuthCallback() {
     }
 
     const savedState = sessionStorage.getItem('oauth_state');
-    if (savedState && state !== savedState) {
-      console.error('OAuth state mismatch');
-      alert('登录失败: 安全验证失败，请重试');
+    if (savedState) {
+      if (state !== savedState) {
+        console.error('OAuth state mismatch');
+        alert('登录失败: 安全验证失败，请重试');
+        sessionStorage.removeItem('oauth_state');
+        router.push('/');
+        return;
+      }
       sessionStorage.removeItem('oauth_state');
-      router.push('/');
-      return;
     }
-    sessionStorage.removeItem('oauth_state');
 
     handleCallback(code);
   }, [searchParams]);
