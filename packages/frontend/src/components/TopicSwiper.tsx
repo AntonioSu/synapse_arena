@@ -34,6 +34,7 @@ export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Pro
         navigation
         pagination={{ clickable: true }}
         effect="fade"
+        fadeEffect={{ crossFade: true }}
         onSlideChange={(swiper) => {
           onTopicChange(topics[swiper.activeIndex]);
         }}

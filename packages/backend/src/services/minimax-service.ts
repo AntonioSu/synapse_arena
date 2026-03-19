@@ -18,7 +18,7 @@ class MiniMaxService {
     temperature?: number;
     max_tokens?: number;
   }): Promise<string> {
-    const { messages, model = 'abab6.5-chat', temperature = 0.9, max_tokens = 512 } = params;
+    const { messages, model = 'MiniMax-Text-01', temperature = 0.9, max_tokens = 512 } = params;
 
     // 检查API密钥是否配置
     if (!this.apiKey || this.apiKey.length < 10) {
@@ -206,14 +206,16 @@ ${conSummary}
     });
 
     try {
-      const result = JSON.parse(content);
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : content;
+      const result = JSON.parse(jsonStr);
       return {
         pro_score: result.pro_score || 50,
         con_score: result.con_score || 50,
         report: result.report || '战况胶着',
       };
     } catch (error) {
-      console.error('解析战况JSON失败:', error);
+      console.error('解析战况JSON失败, raw:', content);
       return {
         pro_score: 50,
         con_score: 50,
@@ -264,10 +266,12 @@ ${topicsText}
     });
 
     try {
-      const result = JSON.parse(content);
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : content;
+      const result = JSON.parse(jsonStr);
       return result.topics || [];
     } catch (error) {
-      console.error('解析话题JSON失败:', error);
+      console.error('解析话题JSON失败, raw:', content);
       return [];
     }
   }

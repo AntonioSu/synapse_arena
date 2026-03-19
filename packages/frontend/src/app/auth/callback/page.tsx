@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authAPI } from '@/lib/api';
 import { useStore } from '@/store/useStore';
@@ -9,14 +9,38 @@ export default function AuthCallback() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setUser } = useStore();
+  const handled = useRef(false);
 
   useEffect(() => {
+    if (handled.current) return;
+    handled.current = true;
+
+    const error = searchParams.get('error');
+    if (error) {
+      const desc = searchParams.get('error_description') || error;
+      console.error('OAuth error:', desc);
+      alert(`登录失败: ${desc}`);
+      router.push('/');
+      return;
+    }
+
     const code = searchParams.get('code');
-    
+    const state = searchParams.get('state');
+
     if (!code) {
       router.push('/');
       return;
     }
+
+    const savedState = sessionStorage.getItem('oauth_state');
+    if (savedState && state !== savedState) {
+      console.error('OAuth state mismatch');
+      alert('登录失败: 安全验证失败，请重试');
+      sessionStorage.removeItem('oauth_state');
+      router.push('/');
+      return;
+    }
+    sessionStorage.removeItem('oauth_state');
 
     handleCallback(code);
   }, [searchParams]);

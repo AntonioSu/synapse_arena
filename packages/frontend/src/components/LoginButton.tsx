@@ -2,10 +2,25 @@
 
 import { config } from '../lib/config';
 
+function generateState(): string {
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export default function LoginButton() {
   const handleLogin = () => {
-    const authUrl = `${config.secondme.authUrl}?client_id=${config.secondme.clientId}&redirect_uri=${encodeURIComponent(config.secondme.redirectUri)}&scope=user.info.softmemory`;
-    window.location.href = authUrl;
+    const state = generateState();
+    sessionStorage.setItem('oauth_state', state);
+
+    const params = new URLSearchParams({
+      client_id: config.secondme.clientId,
+      redirect_uri: config.secondme.redirectUri,
+      response_type: 'code',
+      state,
+    });
+
+    window.location.href = `${config.secondme.authUrl}?${params.toString()}`;
   };
 
   return (

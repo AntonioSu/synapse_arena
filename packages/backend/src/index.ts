@@ -9,7 +9,7 @@ import { redisClient } from './services/redis-client';
 import { topicCrawler } from './services/topic-crawler';
 
 // Routes
-import topicsRouter from './routes/topics-mock';  // 使用mock数据
+import topicsRouter from './routes/topics';
 import commentsRouter from './routes/comments';
 import authRouter from './routes/auth';
 
@@ -72,9 +72,8 @@ export { io };
 // Start server
 const startServer = async () => {
   try {
-    // Test database connection
-    // await db.query('SELECT NOW()');
-    console.log('⚠️  Database connection skipped (PostgreSQL compatibility issue)');
+    await db.query('SELECT NOW()');
+    console.log('✅ Database connected');
 
     // Test Redis connection
     await redisClient.getClient().ping();
