@@ -7,6 +7,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        mono: ['var(--font-mono)', 'JetBrains Mono', 'Fira Code', 'monospace'],
+      },
       colors: {
         cyber: {
           red: '#FF0055',
@@ -17,13 +20,17 @@ module.exports = {
         },
       },
       backgroundImage: {
-        'scanline': 'repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15) 1px, transparent 1px, transparent 2px)',
-        'grid': 'linear-gradient(rgba(0, 217, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 217, 255, 0.05) 1px, transparent 1px)',
+        scanline:
+          'repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15) 1px, transparent 1px, transparent 2px)',
+        grid: 'linear-gradient(rgba(0, 217, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 217, 255, 0.05) 1px, transparent 1px)',
+      },
+      backgroundSize: {
+        grid: '50px 50px',
       },
       animation: {
-        'glitch': 'glitch 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite',
-        'flicker': 'flicker 0.15s infinite',
-        'scan': 'scan 8s linear infinite',
+        glitch: 'glitch 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite',
+        flicker: 'flicker 4s ease-in-out infinite',
+        scan: 'scan 8s linear infinite',
       },
       keyframes: {
         glitch: {
@@ -35,7 +42,7 @@ module.exports = {
         },
         flicker: {
           '0%, 100%': { opacity: 1 },
-          '50%': { opacity: 0.8 },
+          '50%': { opacity: 0.96 },
         },
         scan: {
           '0%': { transform: 'translateY(-100%)' },
@@ -45,4 +52,4 @@ module.exports = {
     },
   },
   plugins: [],
-}
+};

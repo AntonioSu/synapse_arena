@@ -12,6 +12,7 @@ interface Topic {
   title: string;
   pro_stance: string;
   con_stance: string;
+  category?: string;
   battle_state: {
     pro_count: number;
     con_count: number;

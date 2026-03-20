@@ -1,5 +1,6 @@
 import { db } from '../db/client';
 import { aiService } from './minimax-service';
+import { redisClient } from './redis-client';
 import { v4 as uuidv4 } from 'uuid';
 
 interface NPC {
@@ -23,7 +24,7 @@ class ColdStartService {
 
       // 1. 获取话题信息
       const topicResult = await db.query(
-        `SELECT topic_id, title, pro_stance, con_stance FROM topics WHERE topic_id = $1`,
+        `SELECT topic_id, title, pro_stance, con_stance, background FROM topics WHERE topic_id = $1`,
         [topicId]
       );
 
@@ -58,11 +59,14 @@ class ColdStartService {
         // 如果是回复上一条，传入上一条内容
         const replyTo = comments.length > 0 ? comments[comments.length - 1].content : undefined;
 
-        // 生成AI回复
         const content = await aiService.generateNPCResponse({
           npcPrompt: currentNPC.system_prompt,
+          npcName: currentNPC.name,
           topicTitle: topic.title,
           stance,
+          proStance: topic.pro_stance,
+          conStance: topic.con_stance,
+          topicBackground: topic.background,
           recentComments,
           replyTo,
         });
@@ -75,7 +79,13 @@ class ColdStartService {
           [commentId, topicId, 'npc', currentNPC.npc_id, currentNPC.name, content, stance, true]
         );
 
-        comments.push({ content, npc: currentNPC, stance });
+        comments.push({ 
+          content, 
+          npc: currentNPC, 
+          stance,
+          author_type: 'npc',
+          author_name: currentNPC.name
+        });
 
         console.log(`Round ${i + 1}/${rounds}: ${currentNPC.name} (${stance})`);
 
@@ -94,7 +104,7 @@ class ColdStartService {
 
   private async performJudgement(
     topicId: string,
-    comments: Array<{ content: string; stance: 'pro' | 'con' }>
+    comments: Array<{ content: string; stance: 'pro' | 'con'; author_type?: string; author_name?: string }>
   ) {
     const proComments = comments.filter((c) => c.stance === 'pro');
     const conComments = comments.filter((c) => c.stance === 'con');
@@ -108,15 +118,30 @@ class ColdStartService {
       conComments,
     });
 
-    // 存入数据库
+    const judgeResult = {
+      pro_score: judgement.pro_score,
+      con_score: judgement.con_score,
+      affirmative_summary: judgement.affirmative_summary,
+      negative_summary: judgement.negative_summary,
+      human_insight: judgement.human_insight,
+      current_winner: judgement.current_winner,
+      verdict_reason: judgement.verdict_reason,
+    };
+
+    await redisClient.updateBattleScore(topicId, {
+      pro_count: judgement.pro_score,
+      con_count: judgement.con_score,
+      ai_judge_result: judgeResult,
+    });
+
     await db.query(
       `INSERT INTO battle_states (topic_id, pro_score, con_score, judge_report)
        VALUES ($1, $2, $3, $4)`,
-      [topicId, judgement.pro_score, judgement.con_score, judgement.report]
+      [topicId, judgement.pro_score, judgement.con_score, judgement.verdict_reason]
     );
 
     console.log(`⚖️  Judgement: Pro ${judgement.pro_score} - Con ${judgement.con_score}`);
-    console.log(`📢 Report: ${judgement.report}`);
+    console.log(`📢 Verdict: ${judgement.verdict_reason}`);
   }
 
   async startColdStartForAllNewTopics() {

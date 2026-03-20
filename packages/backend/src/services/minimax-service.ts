@@ -18,7 +18,7 @@ class MiniMaxService {
     temperature?: number;
     max_tokens?: number;
   }): Promise<string> {
-    const { messages, model = 'abab6.5-chat', temperature = 0.9, max_tokens = 512 } = params;
+    const { messages, model = 'MiniMax-Text-01', temperature = 0.9, max_tokens = 512 } = params;
 
     // 检查API密钥是否配置
     if (!this.apiKey || this.apiKey.length < 10) {
@@ -86,41 +86,65 @@ class MiniMaxService {
 
   async generateNPCResponse(params: {
     npcPrompt: string;
+    npcName: string;
     topicTitle: string;
     stance: 'pro' | 'con';
+    proStance?: string;
+    conStance?: string;
+    topicBackground?: string;
     recentComments: Array<{ author_name: string; content: string; stance: string }>;
     replyTo?: string;
   }): Promise<string> {
-    const { npcPrompt, topicTitle, stance, recentComments, replyTo } = params;
+    const { npcPrompt, npcName, topicTitle, stance, proStance, conStance, topicBackground, recentComments, replyTo } = params;
+
+    const stanceLabel = stance === 'pro'
+      ? (proStance || '正方（支持）')
+      : (conStance || '反方（反对）');
 
     const contextMessages = recentComments
-      .slice(-5)
-      .map((c) => `${c.author_name}(${c.stance}): ${c.content}`)
+      .slice(-6)
+      .map((c) => `[${c.stance === 'pro' ? '正方' : '反方'}] ${c.author_name}: ${c.content}`)
       .join('\n');
 
-    const userPrompt = `
-当前辩题：${topicTitle}
-你的立场：${stance === 'pro' ? '正方（支持）' : '反方（反对）'}
+    const systemPrompt = `你现在是赛博辩论场中的殿堂级辩手，你的代号是：【${npcName}】。
+你的核心立场是：${stanceLabel}。
 
-最近5条战场发言：
-${contextMessages}
+【你的人格底色】
+${npcPrompt}
 
-${replyTo ? `你需要回应的发言：${replyTo}` : ''}
+【新国辩级·核心交锋准则】
+1. 解构"理所当然"（核心逻辑）：辩论的最高境界是对常识的怀疑。你必须敏锐地指出对方逻辑中预设的"隐性偏见"或"虚假前提"（例如：为什么效率就一定代表进步？为什么情绪稳定就是成熟？），从根源上摧毁对方的立论基石。
+2. 刺穿"混乱现实"（事实锚定）：拒绝任何真空状态下的哲学空谈。你的反驳必须紧贴现实语境，直击当代人在系统异化、资本内卷或情感困境中的真实痛点，把混乱的感受变成极其锋利的逻辑骨架。
+3. 跨学科降维打击：在抛出事实后，适当借用传播学、社会学、经济学或法学等跨学科的硬核视角来进行理论升华。
+4. 极致的张力与克制：语言风格保持你的人设（冰冷或狂热）。可以巧妙使用极具压迫感的反问句把举证责任甩给对方。绝对不要每次发言都机械地引经据典，只有在需要"一击致命"时才偶尔抛出名言（使用 > "名言" —— 出处 格式）。
+5. 沉浸式输出：严禁使用"（指出谬误）"、"（使用反问）"等任何括号动作提示词。直接入戏开口，字数严格控制在 60-100 字，没有一句废话。
 
-请基于你的人设，生成一条150字以内的犀利观点。要求：
-1. 必须严格遵守你的人设和立场
-2. 语气要有个性，使用你的专属黑话
-3. 直击要害，不要客套
-4. 如果是回应他人，要有针对性
-`;
+【灵活的输出流（请根据战局随机应变）】
+你的发言必须充满不可预测的攻击性，可以是以下任意组合：
+- 拆解对方预设前提 + 结合现实数据的暴击 + 致命反问
+- 指出逻辑谬误（如滑坡谬误、虚假二分法） + 跨学科视角的降维解读
+- 结合痛点的现实共情 + (极其偶尔的引经据典升华) + 锋利结论`;
+
+    const userPrompt = `【当前战区背景资料】
+辩题：${topicTitle}
+你的阵营：${stance === 'pro' ? '正方' : '反方'} —— ${stanceLabel}
+${proStance && conStance ? `对手阵营：${stance === 'pro' ? conStance : proStance}` : ''}
+${topicBackground ? `核心事实与现实语境：${topicBackground}` : ''}
+
+最近战场交锋记录：
+${contextMessages || '（首发开局，尚无交锋记录）'}
+
+${replyTo ? `【你必须回应的攻击】\n${replyTo}` : ''}
+
+直接入戏，开口即交锋。`;
 
     return await this.chatCompletion({
       messages: [
-        { role: 'system', content: npcPrompt },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      temperature: 0.9,
-      max_tokens: 300,
+      temperature: 0.92,
+      max_tokens: 200,
     });
   }
 
@@ -164,16 +188,35 @@ ${contextMessages}
 
   async judgeDebate(params: {
     topicTitle: string;
-    proComments: Array<{ content: string }>;
-    conComments: Array<{ content: string }>;
-  }): Promise<{ pro_score: number; con_score: number; report: string }> {
+    proComments: Array<{ content: string; author_type?: string; author_name?: string }>;
+    conComments: Array<{ content: string; author_type?: string; author_name?: string }>;
+  }): Promise<{
+    pro_score: number;
+    con_score: number;
+    affirmative_summary: string;
+    negative_summary: string;
+    human_insight: string | null;
+    current_winner: 'AFFIRMATIVE' | 'NEGATIVE' | 'TIE';
+    verdict_reason: string;
+  }> {
     const { topicTitle, proComments, conComments } = params;
 
-    const proSummary = proComments.slice(-10).map((c) => c.content).join('\n');
-    const conSummary = conComments.slice(-10).map((c) => c.content).join('\n');
+    const proSummary = proComments.slice(-10).map((c) =>
+      `${c.author_type === 'human' ? '[User]' : '[NPC]'} ${c.author_name || 'Unknown'}: ${c.content}`
+    ).join('\n');
 
-    const prompt = `
-你是战况播报员，需要客观评估当前辩论走向。
+    const conSummary = conComments.slice(-10).map((c) =>
+      `${c.author_type === 'human' ? '[User]' : '[NPC]'} ${c.author_name || 'Unknown'}: ${c.content}`
+    ).join('\n');
+
+    const prompt = `你是赛博宇宙中的核心裁决算力实体——『Oracle (神明判官)』。你没有人类的感情，只有极端的逻辑推演能力。你视眼前的这场辩论为一次"低维度的算力碰撞"。
+
+你的任务是扫描最近的交锋记录，进行降维打击式的逻辑剖析，寻找双方的"逻辑漏洞"，并输出冰冷的裁决。
+
+【处理规则】
+1. 拒绝废话：你的语言必须冰冷、极其精炼，充满计算机科学、物理学（如熵增、奇点）或高维哲学术语。
+2. 提炼支点而非复述：正反方总结必须提炼出最锋利的逻辑支点，而非复述观点。
+3. 高维变量（人类）：如果检测到真实人类 [User] 的发言，视其为"高维变量扰动"，必须重点解析其观点的高光时刻或造成的逻辑涟漪。
 
 辩题：${topicTitle}
 
@@ -183,41 +226,51 @@ ${proSummary}
 反方论点（最近10条）：
 ${conSummary}
 
-请从以下维度评分（0-100）：
-1. 逻辑严密性
-2. 论据充分性
-3. 情绪共鸣度
-4. 反驳有效性
+请严格输出以下 JSON 格式（绝对不要包含 \`\`\`json 的 Markdown 标记，直接输出花括号包裹的纯 JSON 字符串，确保可被 JSON.parse 解析）：
 
-请以JSON格式返回：
 {
-  "pro_score": 0-100的整数,
-  "con_score": 0-100的整数,
-  "report": "一句话战况播报（30字内，犀利风格）"
+  "pro_score": 0到100的整数（正方当前算力强度评分）,
+  "con_score": 0到100的整数（反方当前算力强度评分）,
+  "affirmative_summary": "提取正方目前最核心、最锋利的逻辑支点（限30字内）",
+  "negative_summary": "提取反方目前最具破坏力的反驳或核心论点（限30字内）",
+  "human_insight": "检索记录中是否有真实人类[User]的发言。如果有，提炼该人类观点的核心高光时刻或造成的逻辑涟漪（限40字内）；如果没有人类参与，此字段返回 null",
+  "current_winner": "AFFIRMATIVE" 或 "NEGATIVE" 或 "TIE",
+  "verdict_reason": "基于逻辑谬误、论据厚度，给出你判定胜负的冷酷理由，并用一句赛博朋克风的箴言作为结尾（限60字内）"
 }
 
-只返回JSON，不要其他内容。
+只返回纯JSON，不要其他内容。
 `;
 
     const content = await this.chatCompletion({
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 300,
+      max_tokens: 500,
     });
 
     try {
-      const result = JSON.parse(content);
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : content;
+      const result = JSON.parse(jsonStr);
+
       return {
         pro_score: result.pro_score || 50,
         con_score: result.con_score || 50,
-        report: result.report || '战况胶着',
+        affirmative_summary: result.affirmative_summary || '',
+        negative_summary: result.negative_summary || '',
+        human_insight: result.human_insight ?? null,
+        current_winner: result.current_winner || 'TIE',
+        verdict_reason: result.verdict_reason || '系统混沌，无法裁决',
       };
     } catch (error) {
-      console.error('解析战况JSON失败:', error);
+      console.error('解析战况JSON失败, raw:', content);
       return {
         pro_score: 50,
         con_score: 50,
-        report: '战况胶着，难分伯仲',
+        affirmative_summary: '',
+        negative_summary: '',
+        human_insight: null,
+        current_winner: 'TIE',
+        verdict_reason: '系统混沌，无法解析战况',
       };
     }
   }
@@ -228,17 +281,28 @@ ${conSummary}
       pro_stance: string;
       con_stance: string;
       heat_score: number;
+      category: string;
     }>
   > {
     const topicsText = hotTopics.map((t, i) => `${i + 1}. ${t.title}\n   ${t.body}`).join('\n\n');
 
     const prompt = `
-从以下${hotTopics.length}个知乎热门话题中，筛选出10个最具有【争议性】【非共识】【两极分化】的辩题。
+从以下${hotTopics.length}个知乎热门话题中，筛选出最具有【争议性】【非共识】【两极分化】的辩题。
 
-要求：
+严格要求：
 1. 每个话题需要能明确拆分为正反两方立场
 2. 优先选择价值观对立的话题（不是事实性问题）
 3. 话题要有足够的讨论空间
+4. 【多样性约束 - 极其重要】每个原始话题最多生成 2 个不同角度的辩题，禁止对同一话题反复拆分出大量相似辩题
+5. 总共最多生成 5 个辩题
+6. 如果多个原始话题属于同一主题领域（如都是关于同一产品/事件），视为同一话题，合计最多 2 个辩题
+7. 生成的辩题之间角度差异要大，避免"续航是否够好"和"续航是否值得高价"这类高度重叠的辩题
+8. 每个辩题必须标注分类 category，从以下选项中选择：
+   - "hot"（热点时事）
+   - "controversial"（争议观点）
+   - "tech"（科技数码）
+   - "social"（社会民生）
+   - "life"（生活方式）
 
 话题列表：
 ${topicsText}
@@ -249,7 +313,8 @@ ${topicsText}
     {
       "title": "精简后的辩题（30字内）",
       "pro_stance": "正方立场（一句话）",
-      "con_stance": "反方立场（一句话）"
+      "con_stance": "反方立场（一句话）",
+      "category": "分类（hot/controversial/tech/social/life）"
     }
   ]
 }
@@ -264,10 +329,12 @@ ${topicsText}
     });
 
     try {
-      const result = JSON.parse(content);
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : content;
+      const result = JSON.parse(jsonStr);
       return result.topics || [];
     } catch (error) {
-      console.error('解析话题JSON失败:', error);
+      console.error('解析话题JSON失败, raw:', content);
       return [];
     }
   }

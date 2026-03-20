@@ -55,9 +55,8 @@ class ButterflyEffectService {
 
     console.log(`🦋 Starting butterfly effect for comment ${trigger_comment_id}`);
 
-    // 获取话题信息
     const topicResult = await db.query(
-      `SELECT title FROM topics WHERE topic_id = $1`,
+      `SELECT title, pro_stance, con_stance, background FROM topics WHERE topic_id = $1`,
       [topic_id]
     );
     
@@ -65,7 +64,7 @@ class ButterflyEffectService {
       throw new Error(`Topic ${topic_id} not found`);
     }
 
-    const topicTitle = topicResult.rows[0].title;
+    const { title: topicTitle, pro_stance: proStance, con_stance: conStance, background: topicBackground } = topicResult.rows[0];
 
     // 获取触发评论
     const triggerCommentResult = await db.query(
@@ -90,25 +89,28 @@ class ButterflyEffectService {
 
       const recentComments = recentCommentsResult.rows;
 
-      // Step 1: 敌方NPC反击 (3秒内)
       await this.generateEnemyResponse(
         topic_id,
         topicTitle,
         user_stance === 'pro' ? 'con' : 'pro',
         recentComments,
-        triggerContent
+        triggerContent,
+        proStance,
+        conStance,
+        topicBackground
       );
 
-      // 短暂延迟模拟思考
       await this.sleep(1000);
 
-      // Step 2: 友方NPC支援 (5秒内)
       await this.generateAllyResponse(
         topic_id,
         topicTitle,
         user_stance,
         recentComments,
-        triggerContent
+        triggerContent,
+        proStance,
+        conStance,
+        topicBackground
       );
 
       // Step 3: 每2轮进行一次AI裁决
@@ -128,9 +130,11 @@ class ButterflyEffectService {
     topicTitle: string,
     stance: 'pro' | 'con',
     recentComments: any[],
-    triggerContent: string
+    triggerContent: string,
+    proStance?: string,
+    conStance?: string,
+    topicBackground?: string
   ) {
-    // 从对立阵营随机选择NPC
     const npcResult = await db.query(
       `SELECT npc_id, name, system_prompt FROM npcs ORDER BY RANDOM() LIMIT 1`
     );
@@ -139,11 +143,14 @@ class ButterflyEffectService {
 
     const npc = npcResult.rows[0];
 
-    // 生成反击内容
     const content = await aiService.generateNPCResponse({
       npcPrompt: npc.system_prompt,
+      npcName: npc.name,
       topicTitle,
       stance,
+      proStance,
+      conStance,
+      topicBackground,
       recentComments,
       replyTo: `用户刚说了：${triggerContent}，你需要从${stance === 'pro' ? '正' : '反'}方立场犀利反驳`,
     });
@@ -175,9 +182,11 @@ class ButterflyEffectService {
     topicTitle: string,
     stance: 'pro' | 'con',
     recentComments: any[],
-    triggerContent: string
+    triggerContent: string,
+    proStance?: string,
+    conStance?: string,
+    topicBackground?: string
   ) {
-    // 从同阵营随机选择NPC
     const npcResult = await db.query(
       `SELECT npc_id, name, system_prompt FROM npcs ORDER BY RANDOM() LIMIT 1`
     );
@@ -186,11 +195,14 @@ class ButterflyEffectService {
 
     const npc = npcResult.rows[0];
 
-    // 生成支援内容
     const content = await aiService.generateNPCResponse({
       npcPrompt: npc.system_prompt,
+      npcName: npc.name,
       topicTitle,
       stance,
+      proStance,
+      conStance,
+      topicBackground,
       recentComments,
       replyTo: `用户刚说了：${triggerContent}，你需要肯定并补充观点`,
     });
@@ -219,7 +231,7 @@ class ButterflyEffectService {
 
   private async performJudgement(topicId: string, topicTitle: string) {
     const proCommentsResult = await db.query(
-      `SELECT content FROM comments 
+      `SELECT content, author_type, author_name FROM comments 
        WHERE topic_id = $1 AND stance = 'pro' 
        ORDER BY created_at DESC 
        LIMIT 10`,
@@ -227,7 +239,7 @@ class ButterflyEffectService {
     );
 
     const conCommentsResult = await db.query(
-      `SELECT content FROM comments 
+      `SELECT content, author_type, author_name FROM comments 
        WHERE topic_id = $1 AND stance = 'con' 
        ORDER BY created_at DESC 
        LIMIT 10`,
@@ -243,24 +255,32 @@ class ButterflyEffectService {
       conComments,
     });
 
-    // 更新Redis战况
+    const judgeResult = {
+      pro_score: judgement.pro_score,
+      con_score: judgement.con_score,
+      affirmative_summary: judgement.affirmative_summary,
+      negative_summary: judgement.negative_summary,
+      human_insight: judgement.human_insight,
+      current_winner: judgement.current_winner,
+      verdict_reason: judgement.verdict_reason,
+    };
+
     await redisClient.updateBattleScore(topicId, {
       pro_count: judgement.pro_score,
       con_count: judgement.con_score,
+      ai_judge_result: judgeResult,
     });
 
-    // 存入数据库
     await db.query(
       `INSERT INTO battle_states (topic_id, pro_score, con_score, judge_report)
        VALUES ($1, $2, $3, $4)`,
-      [topicId, judgement.pro_score, judgement.con_score, judgement.report]
+      [topicId, judgement.pro_score, judgement.con_score, judgement.verdict_reason]
     );
 
-    // 推送战况更新
     io.to(`battle:${topicId}`).emit('battle_update', {
       pro_score: judgement.pro_score,
       con_score: judgement.con_score,
-      report: judgement.report,
+      ai_judge_result: judgeResult,
     });
 
     console.log(`⚖️  Judgement: Pro ${judgement.pro_score} - Con ${judgement.con_score}`);

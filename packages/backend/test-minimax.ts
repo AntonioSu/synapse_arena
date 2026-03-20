@@ -9,8 +9,11 @@ async function testMiniMax() {
     console.log('测试1: NPC生成回应');
     const npcResponse = await minimaxService.generateNPCResponse({
       npcPrompt: '你是一个理性分析派，喜欢用数据说话，口头禅是"数据不会骗人"',
+      npcName: '数据至上派',
       topicTitle: '996工作制是否应该被禁止',
       stance: 'pro',
+      proStance: '996工作制应该被禁止，劳动者健康权不可侵犯',
+      conStance: '企业有权制定工作制度，996是市场竞争的必然选择',
       recentComments: [
         { author_name: '网友A', content: '996太累了，影响健康', stance: 'pro' },
         { author_name: '网友B', content: '不996怎么在行业竞争中生存', stance: 'con' },

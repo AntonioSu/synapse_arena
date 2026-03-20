@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 export const config = {
   port: parseInt(process.env.BACKEND_PORT || '8080', 10),
@@ -16,8 +16,8 @@ export const config = {
   },
   
   zhihu: {
-    appKey: process.env.ZHIHU_APP_KEY || 'stan-saber',
-    appSecret: process.env.ZHIHU_APP_SECRET || 'mjcgMVerUfH5H6gzmuiAKSdxQk2IH3SH',
+    appKey: process.env.ZHIHU_APP_KEY || '',
+    appSecret: process.env.ZHIHU_APP_SECRET || '',
     baseURL: 'https://openapi.zhihu.com',
     ringIds: ['2001009660925334090', '2015023739549529606'],
   },
@@ -27,8 +27,9 @@ export const config = {
     clientSecret: process.env.SECONDME_CLIENT_SECRET || '',
     redirectUri: process.env.SECONDME_REDIRECT_URI || 'http://localhost:3000/auth/callback',
     authUrl: 'https://go.second.me/oauth/',
-    tokenUrl: 'https://go.second.me/api/oauth/token/code',
-    apiUrl: 'https://api.second.me',
+    tokenUrl: 'https://api.mindverse.com/gate/lab/api/oauth/token/code',
+    tokenRefreshUrl: 'https://api.mindverse.com/gate/lab/api/oauth/token/refresh',
+    apiUrl: 'https://api.mindverse.com/gate/lab',
   },
   
   openai: {
@@ -38,6 +39,6 @@ export const config = {
   minimax: {
     apiKey: process.env.MINIMAX_API_KEY || '',
     groupId: process.env.MINIMAX_GROUP_ID || '',
-    baseURL: 'https://api.minimax.chat/v1',
+    baseURL: 'https://api.minimax.io/v1',
   },
 };

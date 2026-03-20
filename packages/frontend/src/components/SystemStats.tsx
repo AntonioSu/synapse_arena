@@ -3,12 +3,11 @@
 import { useEffect, useState } from 'react';
 
 export default function SystemStats() {
-  const [time, setTime] = useState('00:00:00');
+  const [time, setTime] = useState('--:--:--');
 
   useEffect(() => {
     const updateTime = () => {
-      const now = new Date();
-      setTime(now.toLocaleTimeString());
+      setTime(new Date().toLocaleTimeString());
     };
 
     updateTime();
@@ -17,10 +16,10 @@ export default function SystemStats() {
   }, []);
 
   return (
-    <div className="flex items-center gap-4 text-[10px] text-cyan-500/50">
-      <div>SYS_TIME: {time}</div>
-      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
-      <div>STATUS: ONLINE</div>
+    <div className="flex items-center gap-3 text-[10px] text-gray-400 font-mono" aria-label="system status">
+      <span>SYS_TIME: {time}</span>
+      <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" aria-hidden="true" />
+      <span>ONLINE</span>
     </div>
   );
 }
