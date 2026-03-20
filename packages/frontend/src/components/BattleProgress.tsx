@@ -2,21 +2,40 @@
 
 import { motion } from 'framer-motion';
 
+interface AIJudgeResult {
+  pro_score: number;
+  con_score: number;
+  affirmative_summary?: string;
+  negative_summary?: string;
+  human_insight?: string | null;
+  current_winner?: string;
+  verdict_reason?: string;
+  last_report?: string;
+}
+
 interface BattleState {
   pro_count: number;
   con_count: number;
   pro_votes: number;
   con_votes: number;
   human_participants?: number;
-  ai_judge_result?: {
-    pro_score: number;
-    con_score: number;
-    last_report: string;
-  };
+  ai_judge_result?: AIJudgeResult;
 }
 
 interface Props {
   battleState: BattleState;
+}
+
+function WinnerBadge({ winner }: { winner: string }) {
+  if (winner === 'TIE') {
+    return <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-200 text-gray-600">DEADLOCK</span>;
+  }
+  const isAffirmative = winner === 'AFFIRMATIVE';
+  return (
+    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isAffirmative ? 'bg-red-100 text-red-600' : 'bg-cyan-100 text-cyan-700'}`}>
+      {isAffirmative ? '\u6b63\u65b9\u9886\u5148' : '\u53cd\u65b9\u9886\u5148'}
+    </span>
+  );
 }
 
 export default function BattleProgress({ battleState }: Props) {
@@ -24,6 +43,7 @@ export default function BattleProgress({ battleState }: Props) {
   const proPercentage = (battleState.pro_count / total) * 100;
   const conPercentage = (battleState.con_count / total) * 100;
   const isHumanJudge = (battleState.human_participants || 0) >= 10;
+  const judge = battleState.ai_judge_result;
 
   return (
     <section className="cyber-card p-4 sm:p-6" aria-label="battle status">
@@ -75,18 +95,46 @@ export default function BattleProgress({ battleState }: Props) {
         </div>
       </div>
 
-      {battleState.ai_judge_result && (
+      {judge && (judge.verdict_reason || judge.last_report) && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
-          className="mt-4 p-3 bg-cyan-50/80 border-l-2 border-cyan-400 rounded-r"
+          className="mt-4 p-3 bg-cyan-50/80 border-l-2 border-cyan-400 rounded-r space-y-2.5"
         >
-          <div className="text-[10px] text-cyan-600 mb-1 font-mono">
-            {'[ AI\u6218\u51b5\u64ad\u62a5 ]'}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-cyan-600 font-mono">
+              {'[ AI\u6218\u51b5\u64ad\u62a5 ]'}
+            </span>
+            {judge.current_winner && <WinnerBadge winner={judge.current_winner} />}
           </div>
-          <p className="text-sm text-gray-700 leading-relaxed">
-            {battleState.ai_judge_result.last_report}
+
+          {(judge.affirmative_summary || judge.negative_summary) && (
+            <div className="grid grid-cols-2 gap-3">
+              {judge.affirmative_summary && (
+                <div className="text-xs">
+                  <div className="text-red-500 font-bold mb-0.5 text-[10px] font-mono">{'\u6b63\u65b9\u652f\u70b9'}</div>
+                  <p className="text-gray-600 leading-relaxed">{judge.affirmative_summary}</p>
+                </div>
+              )}
+              {judge.negative_summary && (
+                <div className="text-xs">
+                  <div className="text-cyan-600 font-bold mb-0.5 text-[10px] font-mono">{'\u53cd\u65b9\u652f\u70b9'}</div>
+                  <p className="text-gray-600 leading-relaxed">{judge.negative_summary}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {judge.human_insight && (
+            <div className="text-xs bg-amber-50/80 border border-amber-200/60 rounded px-2 py-1.5">
+              <span className="text-amber-600 font-mono text-[10px] font-bold">{'\u4eba\u7c7b\u53d8\u91cf'} </span>
+              <span className="text-gray-600">{judge.human_insight}</span>
+            </div>
+          )}
+
+          <p className="text-xs text-gray-500 leading-relaxed border-t border-gray-200/60 pt-2 font-mono">
+            {judge.verdict_reason || judge.last_report}
           </p>
         </motion.div>
       )}

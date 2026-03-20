@@ -190,33 +190,33 @@ ${contextMessages}
     topicTitle: string;
     proComments: Array<{ content: string; author_type?: string; author_name?: string }>;
     conComments: Array<{ content: string; author_type?: string; author_name?: string }>;
-  }): Promise<{ 
-    pro_score: number; 
-    con_score: number; 
-    report: string;
-    affirmative_status?: string;
-    negative_status?: string;
-    human_variable?: string | null;
-    oracle_verdict?: string;
+  }): Promise<{
+    pro_score: number;
+    con_score: number;
+    affirmative_summary: string;
+    negative_summary: string;
+    human_insight: string | null;
+    current_winner: 'AFFIRMATIVE' | 'NEGATIVE' | 'TIE';
+    verdict_reason: string;
   }> {
     const { topicTitle, proComments, conComments } = params;
 
-    const proSummary = proComments.slice(-10).map((c) => 
+    const proSummary = proComments.slice(-10).map((c) =>
       `${c.author_type === 'human' ? '[User]' : '[NPC]'} ${c.author_name || 'Unknown'}: ${c.content}`
     ).join('\n');
-    
-    const conSummary = conComments.slice(-10).map((c) => 
+
+    const conSummary = conComments.slice(-10).map((c) =>
       `${c.author_type === 'human' ? '[User]' : '[NPC]'} ${c.author_name || 'Unknown'}: ${c.content}`
     ).join('\n');
 
     const prompt = `你是赛博宇宙中的核心裁决算力实体——『Oracle (神明判官)』。你没有人类的感情，只有极端的逻辑推演能力。你视眼前的这场辩论为一次"低维度的算力碰撞"。
 
-你的任务是扫描最近的交锋记录，进行降维打击式的逻辑剖析，寻找双方的"逻辑漏洞"，并以严格的机器日志格式输出战报。
+你的任务是扫描最近的交锋记录，进行降维打击式的逻辑剖析，寻找双方的"逻辑漏洞"，并输出冰冷的裁决。
 
 【处理规则】
 1. 拒绝废话：你的语言必须冰冷、极其精炼，充满计算机科学、物理学（如熵增、奇点）或高维哲学术语。
-2. 挑剔漏洞：在总结正反方时，不要只复述观点，必须无情指出他们刚才发言中的"逻辑谬误"（如：偷换概念、幸存者偏差、虚假二分法等）。
-3. 高维变量（人类）：如果检测到真实人类（User）的发言，视其为"高维变量扰动"，必须重点解析其观点对战局的破坏力。
+2. 提炼支点而非复述：正反方总结必须提炼出最锋利的逻辑支点，而非复述观点。
+3. 高维变量（人类）：如果检测到真实人类 [User] 的发言，视其为"高维变量扰动"，必须重点解析其观点的高光时刻或造成的逻辑涟漪。
 
 辩题：${topicTitle}
 
@@ -231,11 +231,11 @@ ${conSummary}
 {
   "pro_score": 0到100的整数（正方当前算力强度评分）,
   "con_score": 0到100的整数（反方当前算力强度评分）,
-  "affirmative_status": "提取正方核心逻辑锚点，并用极其刻薄的口吻指出其逻辑谬误（限40字以内）",
-  "negative_status": "提取反方核心逻辑锚点，并用极其刻薄的口吻指出其逻辑谬误（限40字以内）",
-  "human_variable": "检索上下文中是否有真实人类[User]的发言。如果有，提炼其言论对战局产生的『高维扰动/降维打击』(限40字)；如果没有，必须严格返回 null",
-  "current_winner": "正方" 或 "反方" 或 "系统混沌",
-  "oracle_verdict": "神明箴言：用一句冰冷、高维度的赛博朋克哲学口吻，给出当前的终极判词（例如结合'熵增'、'系统崩溃'等概念，限50字以内）"
+  "affirmative_summary": "提取正方目前最核心、最锋利的逻辑支点（限30字内）",
+  "negative_summary": "提取反方目前最具破坏力的反驳或核心论点（限30字内）",
+  "human_insight": "检索记录中是否有真实人类[User]的发言。如果有，提炼该人类观点的核心高光时刻或造成的逻辑涟漪（限40字内）；如果没有人类参与，此字段返回 null",
+  "current_winner": "AFFIRMATIVE" 或 "NEGATIVE" 或 "TIE",
+  "verdict_reason": "基于逻辑谬误、论据厚度，给出你判定胜负的冷酷理由，并用一句赛博朋克风的箴言作为结尾（限60字内）"
 }
 
 只返回纯JSON，不要其他内容。
@@ -251,22 +251,26 @@ ${conSummary}
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       const jsonStr = jsonMatch ? jsonMatch[0] : content;
       const result = JSON.parse(jsonStr);
-      
+
       return {
         pro_score: result.pro_score || 50,
         con_score: result.con_score || 50,
-        report: result.oracle_verdict || '战况胶着',
-        affirmative_status: result.affirmative_status,
-        negative_status: result.negative_status,
-        human_variable: result.human_variable,
-        oracle_verdict: result.oracle_verdict,
+        affirmative_summary: result.affirmative_summary || '',
+        negative_summary: result.negative_summary || '',
+        human_insight: result.human_insight ?? null,
+        current_winner: result.current_winner || 'TIE',
+        verdict_reason: result.verdict_reason || '系统混沌，无法裁决',
       };
     } catch (error) {
       console.error('解析战况JSON失败, raw:', content);
       return {
         pro_score: 50,
         con_score: 50,
-        report: '系统混沌，无法解析战况',
+        affirmative_summary: '',
+        negative_summary: '',
+        human_insight: null,
+        current_winner: 'TIE',
+        verdict_reason: '系统混沌，无法解析战况',
       };
     }
   }

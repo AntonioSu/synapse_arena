@@ -106,7 +106,11 @@ class TopicCrawlerService {
           ai_judge_result: {
             pro_score: 50,
             con_score: 50,
-            last_report: '战斗尚未开始',
+            affirmative_summary: '',
+            negative_summary: '',
+            human_insight: null,
+            current_winner: 'TIE',
+            verdict_reason: '战斗尚未开始',
           },
         });
 

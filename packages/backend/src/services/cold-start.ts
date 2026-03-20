@@ -118,26 +118,30 @@ class ColdStartService {
       conComments,
     });
 
-    // 更新 Redis 战况（包括AI裁判报告）
+    const judgeResult = {
+      pro_score: judgement.pro_score,
+      con_score: judgement.con_score,
+      affirmative_summary: judgement.affirmative_summary,
+      negative_summary: judgement.negative_summary,
+      human_insight: judgement.human_insight,
+      current_winner: judgement.current_winner,
+      verdict_reason: judgement.verdict_reason,
+    };
+
     await redisClient.updateBattleScore(topicId, {
       pro_count: judgement.pro_score,
       con_count: judgement.con_score,
-      ai_judge_result: {
-        pro_score: judgement.pro_score,
-        con_score: judgement.con_score,
-        last_report: judgement.report,
-      },
+      ai_judge_result: judgeResult,
     });
 
-    // 存入数据库
     await db.query(
       `INSERT INTO battle_states (topic_id, pro_score, con_score, judge_report)
        VALUES ($1, $2, $3, $4)`,
-      [topicId, judgement.pro_score, judgement.con_score, judgement.report]
+      [topicId, judgement.pro_score, judgement.con_score, judgement.verdict_reason]
     );
 
     console.log(`⚖️  Judgement: Pro ${judgement.pro_score} - Con ${judgement.con_score}`);
-    console.log(`📢 Report: ${judgement.report}`);
+    console.log(`📢 Verdict: ${judgement.verdict_reason}`);
   }
 
   async startColdStartForAllNewTopics() {

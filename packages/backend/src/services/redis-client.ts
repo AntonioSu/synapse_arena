@@ -44,7 +44,11 @@ class RedisClient {
       ai_judge_result: {
         pro_score: number;
         con_score: number;
-        last_report: string;
+        affirmative_summary: string;
+        negative_summary: string;
+        human_insight: string | null;
+        current_winner: string;
+        verdict_reason: string;
       };
     }>
   ) {
