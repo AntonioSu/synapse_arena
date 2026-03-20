@@ -243,10 +243,15 @@ class ButterflyEffectService {
       conComments,
     });
 
-    // 更新Redis战况
+    // 更新Redis战况（包括AI裁判报告）
     await redisClient.updateBattleScore(topicId, {
       pro_count: judgement.pro_score,
       con_count: judgement.con_score,
+      ai_judge_result: {
+        pro_score: judgement.pro_score,
+        con_score: judgement.con_score,
+        last_report: judgement.report,
+      },
     });
 
     // 存入数据库

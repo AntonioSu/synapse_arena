@@ -41,6 +41,11 @@ class RedisClient {
       pro_votes: number;
       con_votes: number;
       human_participants: number;
+      ai_judge_result: {
+        pro_score: number;
+        con_score: number;
+        last_report: string;
+      };
     }>
   ) {
     const key = `battle:${topicId}:state`;
