@@ -16,9 +16,9 @@ export default function SystemStats() {
   }, []);
 
   return (
-    <div className="flex items-center gap-3 text-[10px] text-cyan-500/70 font-mono" aria-label="system status">
+    <div className="flex items-center gap-3 text-[10px] text-gray-400 font-mono" aria-label="system status">
       <span>SYS_TIME: {time}</span>
-      <span className="w-1.5 h-1.5 bg-cyan-400/60 rounded-full animate-pulse" aria-hidden="true" />
+      <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" aria-hidden="true" />
       <span>ONLINE</span>
     </div>
   );

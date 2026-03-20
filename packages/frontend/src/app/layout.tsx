@@ -20,7 +20,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN" className={`${mono.variable} scroll-smooth`}>
-      <body className="bg-black text-white antialiased font-mono">
+      <body className="bg-[#f0f4f8] text-gray-900 antialiased font-mono">
         {children}
       </body>
     </html>

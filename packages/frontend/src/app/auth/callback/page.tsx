@@ -65,20 +65,20 @@ export default function AuthCallback() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
         className="text-center"
       >
-        <div className="w-12 h-12 mx-auto mb-6 border border-cyan-400/20 rounded-full flex items-center justify-center">
-          <div className="w-3 h-3 bg-cyan-400/60 rounded-full animate-pulse" />
+        <div className="w-12 h-12 mx-auto mb-6 border border-cyan-300 rounded-full flex items-center justify-center">
+          <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse" />
         </div>
-        <div className="text-cyber-blue text-lg animate-pulse-glow mb-3 font-mono">
+        <div className="text-cyan-700 text-lg animate-pulse-glow mb-3 font-mono">
           {'\u8eab\u4efd\u9a8c\u8bc1\u4e2d...'}
         </div>
-        <div className="text-cyan-500/30 text-[10px] font-mono">
+        <div className="text-gray-400 text-[10px] font-mono">
           AUTHENTICATING_WITH_SECONDME
         </div>
       </motion.div>

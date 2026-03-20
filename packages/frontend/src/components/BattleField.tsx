@@ -81,11 +81,7 @@ export default function BattleField({ topic }: Props) {
   const setupSocket = () => {
     socketService.connect();
     socketService.joinBattle(topic.topic_id);
-
-    socketService.onNewComment((comment) => {
-      addComment(comment);
-    });
-
+    socketService.onNewComment((comment) => addComment(comment));
     socketService.onBattleUpdate(() => {});
   };
 
@@ -97,9 +93,8 @@ export default function BattleField({ topic }: Props) {
     <div className="space-y-4">
       <BattleProgress battleState={topic.battle_state} />
 
-      {/* Comments Area */}
-      <section className="cyber-card p-4 sm:p-6 min-h-[400px] max-h-[600px] overflow-y-auto" aria-label="辩论发言区">
-        <div className="text-[10px] text-cyan-500/60 mb-4 font-mono select-none">
+      <section className="cyber-card p-4 sm:p-6 min-h-[400px] max-h-[600px] overflow-y-auto">
+        <div className="text-[10px] text-gray-400 mb-4 font-mono select-none">
           // BATTLE_LOG_STREAM
         </div>
 
@@ -111,13 +106,13 @@ export default function BattleField({ topic }: Props) {
             animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center h-64 text-center"
           >
-            <div className="w-12 h-12 border border-cyan-400/30 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-cyan-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <div className="w-12 h-12 border border-gray-200 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
               </svg>
             </div>
-            <p className="text-cyan-400/70 text-sm mb-1">战场寂静无声...</p>
-            <p className="text-cyan-400/50 text-xs">等待第一个发言者</p>
+            <p className="text-gray-500 text-sm mb-1">{'\u6218\u573a\u5bc2\u9759\u65e0\u58f0...'}</p>
+            <p className="text-gray-400 text-xs">{'\u7b49\u5f85\u7b2c\u4e00\u4e2a\u53d1\u8a00\u8005'}</p>
           </motion.div>
         ) : (
           <div className="space-y-4">
@@ -138,13 +133,12 @@ export default function BattleField({ topic }: Props) {
         )}
       </section>
 
-      {/* Comment Input */}
       {user ? (
         <CommentInput topicId={topic.topic_id} />
       ) : (
         <div className="cyber-card p-4 text-center">
-          <p className="text-cyan-400/70 text-sm">
-            登录后方可参与辩论
+          <p className="text-gray-500 text-sm">
+            {'\u767b\u5f55\u540e\u65b9\u53ef\u53c2\u4e0e\u8fa9\u8bba'}
           </p>
         </div>
       )}

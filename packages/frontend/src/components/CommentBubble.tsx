@@ -33,31 +33,29 @@ export default function CommentBubble({ comment }: Props) {
   const hex = microHash(comment.comment_id);
 
   const borderColor = isHuman
-    ? 'border-green-400/70'
+    ? 'border-green-400'
     : isPro
-    ? 'border-red-500/60'
-    : 'border-cyan-500/60';
+    ? 'border-red-400'
+    : 'border-cyan-400';
 
   const nameColor = isHuman
-    ? 'text-green-400'
+    ? 'text-green-600'
     : isPro
-    ? 'text-red-400'
-    : 'text-cyan-400';
+    ? 'text-red-500'
+    : 'text-cyan-600';
 
-  const textTint = isHuman ? 'text-gray-100' : 'text-gray-200';
   const glowClass = isHuman ? 'laser-glow-green' : '';
   const borderSide = isPro ? 'border-l-2' : 'border-r-2';
   const avatarOrder = isPro ? 'flex-row' : 'flex-row-reverse';
   const alignment = isPro ? 'items-start' : 'items-end';
 
   return (
-    <article className={`flex flex-col ${alignment}`} aria-label={`${comment.author_name} 的发言`}>
+    <article className={`flex flex-col ${alignment}`}>
       <div className={`max-w-[85%] sm:max-w-[75%] flex ${avatarOrder} gap-2 sm:gap-3`}>
-        {/* Avatar */}
         <div className="flex-shrink-0">
           <div
-            className={`w-7 h-7 sm:w-8 sm:h-8 bg-gray-900 flex items-center justify-center
-              text-[10px] font-mono ${nameColor} border border-white/10`}
+            className={`w-7 h-7 sm:w-8 sm:h-8 bg-gray-100 flex items-center justify-center
+              text-[10px] font-mono ${nameColor} border border-gray-200`}
             style={{
               clipPath: 'polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px)',
             }}
@@ -66,41 +64,40 @@ export default function CommentBubble({ comment }: Props) {
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
           <div className={`flex items-center gap-2 mb-1 ${isPro ? '' : 'justify-end'}`}>
             <span className={`text-[11px] font-medium tracking-wide ${nameColor}`}>
               {comment.author_name}
             </span>
             <span className={`label-tag ${
-              isHuman ? 'text-green-400/80 bg-green-400/10' : 'text-white/40 bg-white/[0.06]'
+              isHuman ? 'text-green-600 bg-green-50' : 'text-gray-400 bg-gray-100'
             }`}>
               {isHuman ? 'USER' : 'NPC'}
             </span>
-            <span className="text-[8px] font-mono text-white/40">
+            <span className="text-[8px] font-mono text-gray-400">
               {formatTime(comment.created_at)}
             </span>
           </div>
 
-          <div className={`py-2 px-3 ${borderSide} ${borderColor} ${glowClass} transition-colors`}>
+          <div className={`py-2 px-3 ${borderSide} ${borderColor} ${glowClass} transition-colors bg-gray-50/50 rounded-r-sm`}>
             <div
-              className={`text-[13px] ${textTint} leading-relaxed text-left
-                prose prose-invert prose-sm max-w-none
-                prose-blockquote:border-l-white/20 prose-blockquote:text-white/50
+              className="text-[13px] text-gray-800 leading-relaxed text-left
+                prose prose-sm max-w-none
+                prose-blockquote:border-l-gray-300 prose-blockquote:text-gray-500
                 prose-blockquote:not-italic prose-blockquote:text-[11px]
                 prose-blockquote:my-1.5 prose-blockquote:py-0 prose-blockquote:pl-3
-                prose-strong:text-white/90 prose-strong:font-semibold
-                prose-p:my-0.5 prose-p:leading-relaxed`}
+                prose-strong:text-gray-900 prose-strong:font-semibold
+                prose-p:my-0.5 prose-p:leading-relaxed"
             >
               <ReactMarkdown>{comment.content}</ReactMarkdown>
             </div>
           </div>
 
-          <div className={`flex items-center gap-2 mt-1 font-mono text-[8px] text-white/25 select-none ${isPro ? '' : 'justify-end'}`}>
+          <div className={`flex items-center gap-2 mt-1 font-mono text-[8px] text-gray-300 select-none ${isPro ? '' : 'justify-end'}`}>
             <span>HEX:{hex}</span>
-            <span>·</span>
+            <span>&middot;</span>
             <span>{isPro ? 'PRO' : 'CON'}</span>
-            <span>·</span>
+            <span>&middot;</span>
             <span>[TX_VERIFIED]</span>
           </div>
         </div>

@@ -69,7 +69,7 @@ export default function CommentInput({ topicId }: Props) {
 
   return (
     <div className="cyber-card p-4 sm:p-6 space-y-4">
-      <div className="text-[10px] text-cyan-500/60 font-mono select-none">
+      <div className="text-[10px] text-gray-400 font-mono select-none">
         {'// USER_INPUT_TERMINAL'}
       </div>
 
@@ -85,14 +85,14 @@ export default function CommentInput({ topicId }: Props) {
           >
             <button
               onClick={() => setStance('pro')}
-              className="cyber-button px-6 sm:px-8 py-2.5 sm:py-3 border-cyber-red text-cyber-red hover:bg-red-500/10"
+              className="cyber-button px-6 sm:px-8 py-2.5 sm:py-3 border-red-400 text-red-500 hover:bg-red-50"
               aria-label="support pro side"
             >
               {'\u63f4\u52a9\u6b63\u65b9'}
             </button>
             <button
               onClick={() => setStance('con')}
-              className="cyber-button px-6 sm:px-8 py-2.5 sm:py-3 border-cyber-blue text-cyber-blue hover:bg-cyan-400/10"
+              className="cyber-button px-6 sm:px-8 py-2.5 sm:py-3 border-cyan-400 text-cyan-600 hover:bg-cyan-50"
               aria-label="support con side"
             >
               {'\u63f4\u52a9\u53cd\u65b9'}
@@ -111,13 +111,13 @@ export default function CommentInput({ topicId }: Props) {
           >
             <div className="flex items-center justify-between">
               <span className={`text-sm font-medium ${
-                stance === 'pro' ? 'text-cyber-red' : 'text-cyber-blue'
+                stance === 'pro' ? 'text-red-500' : 'text-cyan-600'
               }`}>
                 {stance === 'pro' ? '\u5f53\u524d\u7acb\u573a: \u6b63\u65b9' : '\u5f53\u524d\u7acb\u573a: \u53cd\u65b9'}
               </span>
               <button
                 onClick={() => setStance(null)}
-                className="text-xs text-cyan-500/70 hover:text-cyan-400 transition-colors"
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
               >
                 {'\u5207\u6362\u7acb\u573a'}
               </button>
@@ -130,24 +130,24 @@ export default function CommentInput({ topicId }: Props) {
                 placeholder={'\u8f93\u5165\u4f60\u7684\u89c2\u70b9\uff08150\u5b57\u4ee5\u5185\uff09...'}
                 maxLength={150}
                 rows={4}
-                className="w-full bg-gray-900/80 border border-cyan-400/30 rounded-sm p-3 sm:p-4 text-sm text-gray-100
-                         placeholder:text-cyan-500/40 resize-none transition-colors
-                         focus:outline-none focus:border-cyan-400/50 focus:bg-gray-900"
+                className="w-full bg-gray-50 border border-gray-200 rounded p-3 sm:p-4 text-sm text-gray-800
+                         placeholder:text-gray-400 resize-none transition-colors
+                         focus:outline-none focus:border-cyan-400 focus:bg-white focus:ring-1 focus:ring-cyan-400/20"
                 disabled={isLoading}
                 aria-label="comment input"
               />
               <div
-                className="absolute bottom-0 left-0 h-[2px] transition-all duration-300"
+                className="absolute bottom-0 left-0 h-[2px] transition-all duration-300 rounded-full"
                 style={{
                   width: `${charRatio * 100}%`,
-                  background: charRatio > 0.9 ? '#FF0055' : charRatio > 0.7 ? '#FFE400' : '#00D9FF',
-                  opacity: charCount > 0 ? 0.6 : 0,
+                  background: charRatio > 0.9 ? '#ef4444' : charRatio > 0.7 ? '#eab308' : '#06b6d4',
+                  opacity: charCount > 0 ? 0.8 : 0,
                 }}
               />
             </div>
 
             <div className="flex items-center justify-between">
-              <span className={`text-xs font-mono ${charRatio > 0.9 ? 'text-cyber-red' : 'text-cyan-500/60'}`}>
+              <span className={`text-xs font-mono ${charRatio > 0.9 ? 'text-red-500' : 'text-gray-400'}`}>
                 {charCount}/150
               </span>
 
@@ -182,14 +182,14 @@ export default function CommentInput({ topicId }: Props) {
             className="space-y-4"
           >
             <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
-              <span className="text-sm text-cyan-400 font-mono">
+              <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+              <span className="text-sm text-cyan-600 font-mono">
                 {'AI\u5206\u8eab\u751f\u6210\u7684\u53d1\u8a00'}
               </span>
             </div>
 
-            <div className="bg-gray-900/80 border border-cyan-400/30 rounded-sm p-3 sm:p-4">
-              <p className="text-sm text-gray-200 leading-relaxed">
+            <div className="bg-cyan-50/60 border border-cyan-200 rounded p-3 sm:p-4">
+              <p className="text-sm text-gray-800 leading-relaxed">
                 {aiContent}
               </p>
             </div>
