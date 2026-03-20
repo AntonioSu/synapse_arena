@@ -33,38 +33,31 @@ export default function CommentBubble({ comment }: Props) {
   const hex = microHash(comment.comment_id);
 
   const borderColor = isHuman
-    ? 'border-green-400/60'
+    ? 'border-green-400/70'
     : isPro
-    ? 'border-red-500/40'
-    : 'border-cyan-500/40';
+    ? 'border-red-500/60'
+    : 'border-cyan-500/60';
 
   const nameColor = isHuman
-    ? 'text-green-400/80'
+    ? 'text-green-400'
     : isPro
-    ? 'text-red-400/70'
-    : 'text-cyan-400/70';
+    ? 'text-red-400'
+    : 'text-cyan-400';
 
-  const textTint = isHuman
-    ? 'text-gray-200'
-    : isPro
-    ? 'text-gray-300'
-    : 'text-gray-300';
-
+  const textTint = isHuman ? 'text-gray-100' : 'text-gray-200';
   const glowClass = isHuman ? 'laser-glow-green' : '';
-
-  const alignment = isPro ? 'items-start' : 'items-end';
-  const borderSide = isPro ? 'border-l' : 'border-r';
+  const borderSide = isPro ? 'border-l-2' : 'border-r-2';
   const avatarOrder = isPro ? 'flex-row' : 'flex-row-reverse';
-  const textAlign = 'text-left';
+  const alignment = isPro ? 'items-start' : 'items-end';
 
   return (
-    <div className={`flex flex-col ${alignment}`}>
-      <div className={`max-w-[75%] flex ${avatarOrder} gap-3`}>
-        {/* Minimal avatar */}
-        <div className="flex-shrink-0 relative">
+    <article className={`flex flex-col ${alignment}`} aria-label={`${comment.author_name} 的发言`}>
+      <div className={`max-w-[85%] sm:max-w-[75%] flex ${avatarOrder} gap-2 sm:gap-3`}>
+        {/* Avatar */}
+        <div className="flex-shrink-0">
           <div
-            className={`w-8 h-8 bg-black flex items-center justify-center
-              text-[10px] font-mono ${nameColor} border border-white/8 grayscale`}
+            className={`w-7 h-7 sm:w-8 sm:h-8 bg-gray-900 flex items-center justify-center
+              text-[10px] font-mono ${nameColor} border border-white/10`}
             style={{
               clipPath: 'polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px)',
             }}
@@ -73,28 +66,25 @@ export default function CommentBubble({ comment }: Props) {
           </div>
         </div>
 
-        {/* Data block */}
+        {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Header micro-typography */}
           <div className={`flex items-center gap-2 mb-1 ${isPro ? '' : 'justify-end'}`}>
             <span className={`text-[11px] font-medium tracking-wide ${nameColor}`}>
               {comment.author_name}
             </span>
-            {!isHuman && (
-              <span className="text-[8px] font-mono text-white/15 tracking-widest">NPC</span>
-            )}
-            {isHuman && (
-              <span className="text-[8px] font-mono text-green-400/30 tracking-widest">USER</span>
-            )}
-            <span className="text-[8px] font-mono text-white/15">
+            <span className={`label-tag ${
+              isHuman ? 'text-green-400/80 bg-green-400/10' : 'text-white/40 bg-white/[0.06]'
+            }`}>
+              {isHuman ? 'USER' : 'NPC'}
+            </span>
+            <span className="text-[8px] font-mono text-white/40">
               {formatTime(comment.created_at)}
             </span>
           </div>
 
-          {/* Content: transparent bg, single border line with Markdown */}
-          <div className={`py-2 px-3 ${borderSide} ${borderColor} ${glowClass}`}>
+          <div className={`py-2 px-3 ${borderSide} ${borderColor} ${glowClass} transition-colors`}>
             <div
-              className={`text-[13px] ${textTint} leading-relaxed ${textAlign}
+              className={`text-[13px] ${textTint} leading-relaxed text-left
                 prose prose-invert prose-sm max-w-none
                 prose-blockquote:border-l-white/20 prose-blockquote:text-white/50
                 prose-blockquote:not-italic prose-blockquote:text-[11px]
@@ -106,8 +96,7 @@ export default function CommentBubble({ comment }: Props) {
             </div>
           </div>
 
-          {/* Footer micro-data */}
-          <div className={`flex items-center gap-2 mt-1 font-mono text-[8px] text-white/10 ${isPro ? '' : 'justify-end'}`}>
+          <div className={`flex items-center gap-2 mt-1 font-mono text-[8px] text-white/25 select-none ${isPro ? '' : 'justify-end'}`}>
             <span>HEX:{hex}</span>
             <span>·</span>
             <span>{isPro ? 'PRO' : 'CON'}</span>
@@ -116,6 +105,6 @@ export default function CommentBubble({ comment }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }

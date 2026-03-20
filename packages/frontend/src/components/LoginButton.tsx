@@ -26,9 +26,10 @@ export default function LoginButton() {
   return (
     <button
       onClick={handleLogin}
-      className="cyber-button primary px-6 py-2"
+      className="cyber-button primary px-4 sm:px-6 py-2 text-xs sm:text-sm"
+      aria-label="Log in with SecondMe"
     >
-      SecondMe登录
+      SecondMe{'\u767b\u5f55'}
     </button>
   );
 }

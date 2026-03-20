@@ -12,6 +12,13 @@ interface Topic {
   title: string;
   pro_stance: string;
   con_stance: string;
+  battle_state: {
+    pro_count: number;
+    con_count: number;
+    pro_votes: number;
+    con_votes: number;
+    human_participants: number;
+  };
 }
 
 interface Props {
@@ -22,11 +29,11 @@ interface Props {
 
 export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Props) {
   return (
-    <div className="cyber-card p-6">
-      <div className="text-[10px] text-cyan-500/50 mb-4">
-        // DEBATE_TOPICS_SELECTOR
+    <section className="cyber-card p-4 sm:p-6" aria-label="debate topics">
+      <div className="text-[10px] text-cyan-500/60 mb-4 font-mono select-none">
+        {'// DEBATE_TOPICS'}
       </div>
-      
+
       <Swiper
         modules={[Navigation, Pagination, EffectFade]}
         spaceBetween={30}
@@ -42,35 +49,33 @@ export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Pro
       >
         {topics.map((topic, index) => (
           <SwiperSlide key={topic.topic_id}>
-            <div className="py-8">
+            <div className="py-6 sm:py-8">
               <div className="text-center mb-6">
-                <div className="text-[10px] text-cyan-500/50 mb-2">
+                <div className="text-[10px] text-cyan-500/60 mb-2 font-mono">
                   TOPIC #{index + 1}
                 </div>
-                <h2 className="text-3xl font-bold text-cyber-blue text-glow mb-4">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-cyber-blue text-glow tracking-wide leading-snug px-4">
                   {topic.title}
                 </h2>
               </div>
-              
-              <div className="grid grid-cols-2 gap-6">
-                {/* 正方 */}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div className="cyber-card p-4 border-l-2 border-cyber-red">
-                  <div className="text-xs text-cyber-red mb-2">
-                    [ 正方立场 ]
+                  <div className="text-xs text-cyber-red mb-2 font-mono">
+                    {'[ \u6b63\u65b9\u7acb\u573a ]'}
                   </div>
-                  <div className="text-sm text-gray-300">
+                  <p className="text-sm text-gray-100 leading-relaxed">
                     {topic.pro_stance}
-                  </div>
+                  </p>
                 </div>
-                
-                {/* 反方 */}
-                <div className="cyber-card p-4 border-l-2 border-cyber-blue">
-                  <div className="text-xs text-cyber-blue mb-2">
-                    [ 反方立场 ]
+
+                <div className="cyber-card p-4 border-l-2 sm:border-l-0 sm:border-r-2 border-cyber-blue">
+                  <div className="text-xs text-cyber-blue mb-2 font-mono">
+                    {'[ \u53cd\u65b9\u7acb\u573a ]'}
                   </div>
-                  <div className="text-sm text-gray-300">
+                  <p className="text-sm text-gray-100 leading-relaxed">
                     {topic.con_stance}
-                  </div>
+                  </p>
                 </div>
               </div>
             </div>
@@ -81,24 +86,40 @@ export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Pro
       <style jsx global>{`
         .topic-swiper .swiper-button-next,
         .topic-swiper .swiper-button-prev {
-          color: rgba(0, 217, 255, 0.5);
-          width: 40px;
-          height: 40px;
+          color: rgba(0, 217, 255, 0.4);
+          width: 36px;
+          height: 36px;
+          transition: color 0.2s, transform 0.2s;
         }
-        
         .topic-swiper .swiper-button-next:hover,
         .topic-swiper .swiper-button-prev:hover {
-          color: rgba(0, 217, 255, 1);
+          color: rgba(0, 217, 255, 0.9);
+          transform: scale(1.1);
         }
-        
+        .topic-swiper .swiper-button-next::after,
+        .topic-swiper .swiper-button-prev::after {
+          font-size: 18px;
+          font-weight: bold;
+        }
         .topic-swiper .swiper-pagination-bullet {
-          background: rgba(0, 217, 255, 0.3);
+          background: rgba(0, 217, 255, 0.2);
+          opacity: 1;
+          width: 6px;
+          height: 6px;
+          transition: all 0.2s;
         }
-        
         .topic-swiper .swiper-pagination-bullet-active {
-          background: rgba(0, 217, 255, 1);
+          background: rgba(0, 217, 255, 0.8);
+          width: 20px;
+          border-radius: 3px;
+        }
+        @media (max-width: 640px) {
+          .topic-swiper .swiper-button-next,
+          .topic-swiper .swiper-button-prev {
+            display: none;
+          }
         }
       `}</style>
-    </div>
+    </section>
   );
 }

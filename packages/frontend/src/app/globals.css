@@ -9,7 +9,6 @@
     overflow-x: hidden;
   }
 
-  /* 赛博扫描线效果 */
   body::before {
     content: '';
     position: fixed;
@@ -36,73 +35,116 @@
       );
     background-size: 100% 100%, 50px 50px, 50px 50px;
     pointer-events: none;
-    z-index: 9999;
-    animation: flicker 0.15s infinite;
+    z-index: 50;
+    animation: flicker 4s ease-in-out infinite;
   }
 
-  /* 滚动条样式 */
+  @media (prefers-reduced-motion: reduce) {
+    body::before {
+      animation: none;
+    }
+  }
+
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.5);
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(0, 217, 255, 0.3);
-    border-radius: 4px;
+    background: rgba(0, 217, 255, 0.2);
+    border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 217, 255, 0.5);
+    background: rgba(0, 217, 255, 0.4);
+  }
+
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 217, 255, 0.6);
   }
 }
 
 @layer components {
-  /* 幽灵按钮 */
   .cyber-button {
     @apply relative px-6 py-2;
-    @apply bg-black/5 backdrop-blur-sm;
-    @apply border border-cyan-400/50;
-    @apply transition-all duration-300;
-    @apply text-cyan-300 text-sm;
-    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    @apply bg-black/30 backdrop-blur-sm;
+    @apply border border-cyan-400/40;
+    @apply transition-all duration-200;
+    @apply text-cyan-300 text-sm font-medium tracking-wide;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
   }
 
   .cyber-button:hover {
-    @apply border-cyan-400;
-    box-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+    @apply border-cyan-400 bg-cyan-400/10;
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.3), inset 0 0 20px rgba(0, 217, 255, 0.05);
+  }
+
+  .cyber-button:active {
+    @apply bg-cyan-400/20;
+    transform: scale(0.97);
+  }
+
+  .cyber-button:disabled {
+    @apply opacity-40 cursor-not-allowed;
+  }
+
+  .cyber-button:disabled:hover {
+    @apply border-cyan-400/40 bg-black/30;
+    box-shadow: none;
   }
 
   .cyber-button.primary {
-    @apply border-cyan-400 text-cyan-400;
+    @apply border-cyan-400 text-cyber-blue bg-cyan-400/10;
+  }
+
+  .cyber-button.primary:hover {
+    @apply bg-cyan-400/20;
+    box-shadow: 0 0 24px rgba(0, 217, 255, 0.4), inset 0 0 24px rgba(0, 217, 255, 0.08);
   }
 
   .cyber-button.danger {
-    @apply border-red-500 text-red-500;
+    @apply border-red-500/60 text-red-400 bg-red-500/5;
   }
 
   .cyber-button.danger:hover {
-    @apply border-red-400;
-    box-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
+    @apply border-red-400 bg-red-500/15;
+    box-shadow: 0 0 20px rgba(255, 0, 85, 0.3);
   }
 
-  /* 赛博卡片 */
   .cyber-card {
-    @apply bg-black/80 backdrop-blur-sm;
-    @apply border border-cyan-400/20;
-    @apply relative;
+    @apply bg-gray-950/90 backdrop-blur-md;
+    @apply border border-cyan-400/25;
+    @apply relative rounded-sm;
     clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
   }
 
-  /* 文字发光 */
-  .text-glow {
-    text-shadow: 0 0 10px currentColor;
+  .cyber-card::before {
+    content: '';
+    @apply absolute top-0 left-0 w-[10px] h-[1px] bg-cyan-400/40;
   }
 
-  /* 进度条 */
+  .cyber-card::after {
+    content: '';
+    @apply absolute bottom-0 right-0 w-[10px] h-[1px] bg-cyan-400/40;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px currentColor, 0 0 30px currentColor;
+  }
+
+  .text-glow-sm {
+    text-shadow: 0 0 6px currentColor;
+  }
+
+  .laser-glow-green {
+    box-shadow: -2px 0 8px rgba(0, 255, 148, 0.15);
+  }
+
   .progress-bar {
     @apply h-2 bg-gradient-to-r relative overflow-hidden;
   }
@@ -113,11 +155,15 @@
     @apply bg-white/20;
     animation: scan 2s linear infinite;
   }
+
+  .label-tag {
+    @apply text-[8px] font-mono tracking-[0.2em] uppercase px-1.5 py-0.5 rounded-sm;
+  }
 }
 
 @keyframes flicker {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.95; }
+  50% { opacity: 0.96; }
 }
 
 @keyframes scan {
@@ -125,18 +171,41 @@
   100% { transform: translateX(100%); }
 }
 
-/* Loading animation */
 @keyframes pulse-glow {
   0%, 100% {
     opacity: 1;
     filter: brightness(1);
   }
   50% {
-    opacity: 0.8;
-    filter: brightness(1.2);
+    opacity: 0.7;
+    filter: brightness(1.3);
   }
 }
 
 .animate-pulse-glow {
-  animation: pulse-glow 1.5s ease-in-out infinite;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 217, 255, 0.05) 25%,
+    rgba(0, 217, 255, 0.1) 50%,
+    rgba(0, 217, 255, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-glow,
+  .skeleton,
+  .progress-bar::after {
+    animation: none;
+  }
 }
