@@ -82,14 +82,14 @@ cd ../..
 
 ```env
 # 数据库
-DATABASE_URL=postgresql://user:password@localhost:5432/synapse_arena
+DATABASE_URL=postgresql://user:xxx@localhost:5432/synapse_arena
 
 # Redis
 REDIS_URL=redis://localhost:6379
 
 # 知乎API（已提供）
-ZHIHU_APP_KEY=stan-saber
-ZHIHU_APP_SECRET=mjcgMVerUfH5H6gzmuiAKSdxQk2IH3SH
+ZHIHU_APP_KEY=xxx
+ZHIHU_APP_SECRET=xxx
 
 # SecondMe OAuth
 SECONDME_CLIENT_ID=your_client_id
