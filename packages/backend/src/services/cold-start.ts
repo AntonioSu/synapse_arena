@@ -1,5 +1,6 @@
 import { db } from '../db/client';
 import { aiService } from './minimax-service';
+import { redisClient } from './redis-client';
 import { v4 as uuidv4 } from 'uuid';
 
 interface NPC {
@@ -114,6 +115,12 @@ class ColdStartService {
       conComments,
     });
 
+    // 更新 Redis 战况
+    await redisClient.updateBattleScore(topicId, {
+      pro_count: judgement.pro_score,
+      con_count: judgement.con_score,
+    });
+
     // 存入数据库
     await db.query(
       `INSERT INTO battle_states (topic_id, pro_score, con_score, judge_report)
@@ -139,4 +146,3 @@ class ColdStartService {
 }
 
 export const coldStartService = new ColdStartService();
-);

@@ -22,6 +22,7 @@ export default function BattleField({ topic }: Props) {
   const { comments, setComments, addComment, user } = useStore();
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const skipScrollRef = useRef(false);
 
   useEffect(() => {
     loadComments();
@@ -35,6 +36,10 @@ export default function BattleField({ topic }: Props) {
   }, [topic.topic_id]);
 
   useEffect(() => {
+    if (skipScrollRef.current) {
+      skipScrollRef.current = false;
+      return;
+    }
     scrollToBottom();
   }, [comments]);
 
@@ -43,6 +48,7 @@ export default function BattleField({ topic }: Props) {
       setIsLoading(true);
       const response = await topicsAPI.getComments(topic.topic_id, 100);
       if (response.data.success) {
+        skipScrollRef.current = true;
         setComments(response.data.data);
       }
     } catch (error) {

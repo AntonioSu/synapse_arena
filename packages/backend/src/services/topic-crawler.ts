@@ -3,6 +3,7 @@ import { zhihuAPI } from './zhihu-api';
 import { aiService } from './minimax-service';
 import { db } from '../db/client';
 import { redisClient } from './redis-client';
+import { coldStartService } from './cold-start';
 import { v4 as uuidv4 } from 'uuid';
 
 class TopicCrawlerService {
@@ -91,6 +92,20 @@ class TopicCrawlerService {
 
       const finalCount = existingCount + topicIds.length;
       console.log(`📊 Total active topics: ${finalCount} (added ${topicIds.length})`);
+
+      // 5. 为所有新话题启动冷启动（生成初始辩论并执行AI裁判）
+      if (topicIds.length > 0) {
+        console.log(`\n🥶 Starting cold start for ${topicIds.length} new topics...\n`);
+        for (const topicId of topicIds) {
+          try {
+            await coldStartService.generateColdStartBattle(topicId, 20); // 20轮快速冷启动
+          } catch (error) {
+            console.error(`❌ Cold start failed for topic ${topicId}:`, error);
+            // 继续处理下一个话题
+          }
+        }
+        console.log(`\n✅ Cold start completed for all new topics\n`);
+      }
 
       return topicIds;
     } catch (error) {
