@@ -27,15 +27,6 @@ export default function BattleProgress({ battleState }: Props) {
 
   return (
     <section className="cyber-card p-4 sm:p-6" aria-label="battle status">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-[10px] text-gray-400 font-mono select-none">
-          {'// BATTLE_STATUS'}
-        </span>
-        <span className={`label-tag ${isHumanJudge ? 'text-green-600 bg-green-50' : 'text-cyan-600 bg-cyan-50'}`}>
-          {isHumanJudge ? '\u4eba\u7c7b\u5171\u8bc6' : 'AI\u88c1\u5224'}
-        </span>
-      </div>
-
       <div
         className="relative h-9 sm:h-10 overflow-hidden bg-gray-100 border border-gray-200 rounded"
         role="progressbar"

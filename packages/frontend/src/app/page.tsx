@@ -39,28 +39,25 @@ export default function Home() {
       <div className="fixed inset-0 bg-grid opacity-30 pointer-events-none" />
 
       <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/85 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-center relative">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-center gap-20 sm:gap-36">
           <h1 className="text-lg sm:text-2xl font-bold text-cyan-600 text-glow tracking-wider">
             AI{'\u8fa9\u8bba\u573a'}
           </h1>
-
-          <div className="absolute right-4 sm:right-6 lg:right-8 flex items-center gap-3 sm:gap-4">
-            {user ? (
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-8 h-8 bg-cyan-100 border border-cyan-300 flex items-center justify-center overflow-hidden"
-                  style={{ clipPath: 'polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)' }}
-                >
-                  {user.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-cyan-600 text-xs font-bold">{user.username[0]}</span>
-                  )}
-                </div>
-                <span className="text-cyan-700 text-sm hidden sm:inline">{user.username}</span>
+          {user && (
+            <div className="flex items-center gap-2">
+              <div
+                className="w-8 h-8 bg-cyan-100 border border-cyan-300 flex items-center justify-center overflow-hidden"
+                style={{ clipPath: 'polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)' }}
+              >
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-cyan-600 text-xs font-bold">{user.username[0]}</span>
+                )}
               </div>
-            ) : null}
-          </div>
+              <span className="text-cyan-700 text-sm hidden sm:inline">{user.username}</span>
+            </div>
+          )}
         </div>
       </header>
 

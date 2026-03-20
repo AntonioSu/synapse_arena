@@ -93,13 +93,6 @@ export default function CommentBubble({ comment }: Props) {
             </div>
           </div>
 
-          <div className={`flex items-center gap-2 mt-1 font-mono text-[8px] text-gray-300 select-none ${isPro ? '' : 'justify-end'}`}>
-            <span>HEX:{hex}</span>
-            <span>&middot;</span>
-            <span>{isPro ? 'PRO' : 'CON'}</span>
-            <span>&middot;</span>
-            <span>[TX_VERIFIED]</span>
-          </div>
         </div>
       </div>
     </article>

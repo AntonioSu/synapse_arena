@@ -94,10 +94,6 @@ export default function BattleField({ topic }: Props) {
       <BattleProgress battleState={topic.battle_state} />
 
       <section className="cyber-card p-4 sm:p-6 min-h-[400px] max-h-[600px] overflow-y-auto">
-        <div className="text-[10px] text-gray-400 mb-4 font-mono select-none">
-          // BATTLE_LOG_STREAM
-        </div>
-
         {isLoading ? (
           <CommentSkeleton />
         ) : comments.length === 0 ? (

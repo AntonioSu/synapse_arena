@@ -89,8 +89,8 @@ export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Pro
           color: rgba(0, 160, 200, 0.5);
           width: 36px;
           height: 36px;
-          top: 50%;
-          transform: translateY(-50%);
+          top: 55px;
+          transform: none;
           transition: color 0.2s;
         }
         .topic-swiper .swiper-button-prev {
