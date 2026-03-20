@@ -30,10 +30,6 @@ interface Props {
 export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Props) {
   return (
     <section className="cyber-card p-4 sm:p-6" aria-label="debate topics">
-      <div className="text-[10px] text-gray-400 mb-4 font-mono select-none">
-        {'// DEBATE_TOPICS'}
-      </div>
-
       <Swiper
         modules={[Navigation, Pagination, EffectFade]}
         spaceBetween={30}
@@ -51,9 +47,6 @@ export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Pro
           <SwiperSlide key={topic.topic_id}>
             <div className="py-6 sm:py-8 bg-white">
               <div className="text-center mb-6">
-                <div className="text-[10px] text-gray-400 mb-2 font-mono">
-                  TOPIC #{index + 1}
-                </div>
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-cyan-700 tracking-wide leading-snug px-4">
                   {topic.title}
                 </h2>

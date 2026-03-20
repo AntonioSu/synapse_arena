@@ -7,7 +7,7 @@ import { topicsAPI } from '@/lib/api';
 import TopicSwiper from '@/components/TopicSwiper';
 import BattleField from '@/components/BattleField';
 import LoginButton from '@/components/LoginButton';
-import SystemStats from '@/components/SystemStats';
+
 
 export default function Home() {
   const { topics, setTopics, currentTopic, setCurrentTopic, user } = useStore();
@@ -39,20 +39,12 @@ export default function Home() {
       <div className="fixed inset-0 bg-grid opacity-30 pointer-events-none" />
 
       <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/85 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-lg sm:text-2xl font-bold text-cyan-600 text-glow tracking-wider">
-              SYNAPSE_ARENA
-            </h1>
-            <span className="hidden sm:inline text-[8px] text-cyan-600/50 font-mono">
-              v1.0 // SYS.RDY
-            </span>
-          </div>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-center relative">
+          <h1 className="text-lg sm:text-2xl font-bold text-cyan-600 text-glow tracking-wider">
+            AI{'\u8fa9\u8bba\u573a'}
+          </h1>
 
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="hidden sm:block">
-              <SystemStats />
-            </div>
+          <div className="absolute right-4 sm:right-6 lg:right-8 flex items-center gap-3 sm:gap-4">
             {user ? (
               <div className="flex items-center gap-2">
                 <div
