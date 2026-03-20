@@ -22,10 +22,11 @@ api.interceptors.request.use((config) => {
 
 // API methods
 export const topicsAPI = {
-  getAll: () => api.get('/topics'),
+  getAll: (category?: string) => api.get('/topics', { params: category && category !== 'all' ? { category } : {} }),
   getById: (id: string) => api.get(`/topics/${id}`),
   getComments: (id: string, limit = 100, offset = 0) => 
     api.get(`/topics/${id}/comments`, { params: { limit, offset } }),
+  getCategories: () => api.get('/topics/categories'),
 };
 
 export const commentsAPI = {

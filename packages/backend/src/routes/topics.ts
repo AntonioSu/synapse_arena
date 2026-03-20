@@ -7,12 +7,22 @@ const router = Router();
 // 获取活跃话题列表
 router.get('/', async (req, res) => {
   try {
+    const { category } = req.query;
+    const params: any[] = [];
+    let whereClause = `WHERE status = 'active'`;
+
+    if (category && category !== 'all') {
+      params.push(category);
+      whereClause += ` AND category = $${params.length}`;
+    }
+
     const result = await db.query(
-      `SELECT topic_id, title, pro_stance, con_stance, heat_score, created_at 
+      `SELECT topic_id, title, pro_stance, con_stance, heat_score, category, created_at 
        FROM topics 
-       WHERE status = 'active' 
+       ${whereClause}
        ORDER BY created_at DESC 
-       LIMIT 10`
+       LIMIT 10`,
+      params
     );
 
     const topics = await Promise.all(
@@ -34,6 +44,24 @@ router.get('/', async (req, res) => {
   } catch (error) {
     console.error('Get topics error:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch topics' });
+  }
+});
+
+// 获取分类及各分类话题数
+router.get('/categories', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT category, COUNT(*) as count 
+       FROM topics 
+       WHERE status = 'active' 
+       GROUP BY category 
+       ORDER BY count DESC`
+    );
+    const total = result.rows.reduce((sum, r) => sum + parseInt(r.count), 0);
+    res.json({ success: true, data: { total, categories: result.rows } });
+  } catch (error) {
+    console.error('Get categories error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch categories' });
   }
 });
 

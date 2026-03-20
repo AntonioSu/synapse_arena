@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { authAPI } from '@/lib/api';
 import { useStore } from '@/store/useStore';
 
-export default function AuthCallback() {
+function AuthCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setUser } = useStore();
@@ -83,5 +83,17 @@ export default function AuthCallback() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse" />
+      </div>
+    }>
+      <AuthCallbackInner />
+    </Suspense>
   );
 }

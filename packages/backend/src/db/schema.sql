@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS topics (
   con_stance VARCHAR(200),
   zhihu_link TEXT,
   heat_score BIGINT DEFAULT 0,
+  category VARCHAR(20) DEFAULT 'hot',
   status VARCHAR(20) DEFAULT 'active',
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
@@ -13,6 +14,7 @@ CREATE TABLE IF NOT EXISTS topics (
 
 CREATE INDEX idx_topics_status ON topics(status);
 CREATE INDEX idx_topics_created_at ON topics(created_at DESC);
+CREATE INDEX idx_topics_category ON topics(category);
 
 -- NPC人设表
 CREATE TABLE IF NOT EXISTS npcs (

@@ -253,17 +253,28 @@ ${conSummary}
       pro_stance: string;
       con_stance: string;
       heat_score: number;
+      category: string;
     }>
   > {
     const topicsText = hotTopics.map((t, i) => `${i + 1}. ${t.title}\n   ${t.body}`).join('\n\n');
 
     const prompt = `
-从以下${hotTopics.length}个知乎热门话题中，筛选出10个最具有【争议性】【非共识】【两极分化】的辩题。
+从以下${hotTopics.length}个知乎热门话题中，筛选出最具有【争议性】【非共识】【两极分化】的辩题。
 
-要求：
+严格要求：
 1. 每个话题需要能明确拆分为正反两方立场
 2. 优先选择价值观对立的话题（不是事实性问题）
 3. 话题要有足够的讨论空间
+4. 【多样性约束 - 极其重要】每个原始话题最多生成 2 个不同角度的辩题，禁止对同一话题反复拆分出大量相似辩题
+5. 总共最多生成 5 个辩题
+6. 如果多个原始话题属于同一主题领域（如都是关于同一产品/事件），视为同一话题，合计最多 2 个辩题
+7. 生成的辩题之间角度差异要大，避免"续航是否够好"和"续航是否值得高价"这类高度重叠的辩题
+8. 每个辩题必须标注分类 category，从以下选项中选择：
+   - "hot"（热点时事）
+   - "controversial"（争议观点）
+   - "tech"（科技数码）
+   - "social"（社会民生）
+   - "life"（生活方式）
 
 话题列表：
 ${topicsText}
@@ -274,7 +285,8 @@ ${topicsText}
     {
       "title": "精简后的辩题（30字内）",
       "pro_stance": "正方立场（一句话）",
-      "con_stance": "反方立场（一句话）"
+      "con_stance": "反方立场（一句话）",
+      "category": "分类（hot/controversial/tech/social/life）"
     }
   ]
 }

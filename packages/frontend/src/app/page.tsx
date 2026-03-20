@@ -1,30 +1,51 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import { topicsAPI } from '@/lib/api';
 import TopicSwiper from '@/components/TopicSwiper';
 import BattleField from '@/components/BattleField';
 import LoginButton from '@/components/LoginButton';
+import CategoryTabs from '@/components/CategoryTabs';
 
 
 export default function Home() {
   const { topics, setTopics, currentTopic, setCurrentTopic, user } = useStore();
   const [isLoading, setIsLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    loadTopics();
+    loadTopics('all');
+    loadCategories();
   }, []);
 
-  const loadTopics = async () => {
+  const loadCategories = async () => {
+    try {
+      const response = await topicsAPI.getCategories();
+      if (response.data.success) {
+        const counts: Record<string, number> = {};
+        for (const item of response.data.data.categories) {
+          counts[item.category] = parseInt(item.count);
+        }
+        setCategoryCounts(counts);
+      }
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+    }
+  };
+
+  const loadTopics = useCallback(async (category: string) => {
     try {
       setIsLoading(true);
-      const response = await topicsAPI.getAll();
+      const response = await topicsAPI.getAll(category);
       if (response.data.success) {
         setTopics(response.data.data);
         if (response.data.data.length > 0) {
           setCurrentTopic(response.data.data[0]);
+        } else {
+          setCurrentTopic(null);
         }
       }
     } catch (error) {
@@ -32,6 +53,11 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
+  }, [setTopics, setCurrentTopic]);
+
+  const handleCategoryChange = (category: string) => {
+    setActiveCategory(category);
+    loadTopics(category);
   };
 
   return (
@@ -128,7 +154,7 @@ export default function Home() {
                   {'\u7cfb\u7edf\u6b63\u5728\u751f\u6210\u65b0\u7684\u8fa9\u9898\uff0c\u8bf7\u7a0d\u540e\u5237\u65b0...'}
                 </p>
                 <button
-                  onClick={loadTopics}
+                  onClick={() => loadTopics('all')}
                   className="cyber-button primary px-8 py-2.5 mt-6"
                 >
                   {'\u5237\u65b0'}
@@ -142,11 +168,26 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: 'easeOut' }}
             >
+              <div className="mb-4">
+                <CategoryTabs
+                  activeCategory={activeCategory}
+                  onCategoryChange={handleCategoryChange}
+                  categoryCounts={categoryCounts}
+                />
+              </div>
+
+              {topics.length === 0 ? (
+                <div className="text-center cyber-card p-8 sm:p-10">
+                  <p className="text-gray-400 text-sm font-mono">{'该分类暂无话题'}</p>
+                </div>
+              ) : (
               <TopicSwiper
+                key={activeCategory}
                 topics={topics}
                 currentTopic={currentTopic}
                 onTopicChange={(topic) => setCurrentTopic(topic)}
               />
+              )}
 
               <AnimatePresence mode="wait">
                 {currentTopic && (
