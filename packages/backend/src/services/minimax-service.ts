@@ -86,41 +86,63 @@ class MiniMaxService {
 
   async generateNPCResponse(params: {
     npcPrompt: string;
+    npcName: string;
     topicTitle: string;
     stance: 'pro' | 'con';
+    proStance?: string;
+    conStance?: string;
     recentComments: Array<{ author_name: string; content: string; stance: string }>;
     replyTo?: string;
   }): Promise<string> {
-    const { npcPrompt, topicTitle, stance, recentComments, replyTo } = params;
+    const { npcPrompt, npcName, topicTitle, stance, proStance, conStance, recentComments, replyTo } = params;
+
+    const stanceLabel = stance === 'pro'
+      ? (proStance || '正方（支持）')
+      : (conStance || '反方（反对）');
 
     const contextMessages = recentComments
-      .slice(-5)
-      .map((c) => `${c.author_name}(${c.stance}): ${c.content}`)
+      .slice(-6)
+      .map((c) => `[${c.stance === 'pro' ? '正方' : '反方'}] ${c.author_name}: ${c.content}`)
       .join('\n');
 
-    const userPrompt = `
-当前辩题：${topicTitle}
-你的立场：${stance === 'pro' ? '正方（支持）' : '反方（反对）'}
+    const systemPrompt = `你现在是赛博辩论场中的殿堂级辩手，你的代号是：【${npcName}】。
+你的核心立场是：${stanceLabel}。
 
-最近5条战场发言：
-${contextMessages}
+【你的人格底色】
+${npcPrompt}
 
-${replyTo ? `你需要回应的发言：${replyTo}` : ''}
+【新国辩级·核心交锋准则】
+1. 解构"理所当然"（核心逻辑）：辩论的最高境界是对常识的怀疑。你必须敏锐地指出对方逻辑中预设的"隐性偏见"或"虚假前提"（例如：为什么效率就一定代表进步？为什么情绪稳定就是成熟？），从根源上摧毁对方的立论基石。
+2. 刺穿"混乱现实"（事实锚定）：拒绝任何真空状态下的哲学空谈。你的反驳必须紧贴现实语境，直击当代人在系统异化、资本内卷或情感困境中的真实痛点，把混乱的感受变成极其锋利的逻辑骨架。
+3. 跨学科降维打击：在抛出事实后，适当借用传播学、社会学、经济学或法学等跨学科的硬核视角来进行理论升华。
+4. 极致的张力与克制：语言风格保持你的人设（冰冷或狂热）。可以巧妙使用极具压迫感的反问句把举证责任甩给对方。绝对不要每次发言都机械地引经据典，只有在需要"一击致命"时才偶尔抛出名言（使用 > "名言" —— 出处 格式）。
+5. 沉浸式输出：严禁使用"（指出谬误）"、"（使用反问）"等任何括号动作提示词。直接入戏开口，字数严格控制在 60-100 字，没有一句废话。
 
-请基于你的人设，生成一条150字以内的犀利观点。要求：
-1. 必须严格遵守你的人设和立场
-2. 语气要有个性，使用你的专属黑话
-3. 直击要害，不要客套
-4. 如果是回应他人，要有针对性
-`;
+【灵活的输出流（请根据战局随机应变）】
+你的发言必须充满不可预测的攻击性，可以是以下任意组合：
+- 拆解对方预设前提 + 结合现实数据的暴击 + 致命反问
+- 指出逻辑谬误（如滑坡谬误、虚假二分法） + 跨学科视角的降维解读
+- 结合痛点的现实共情 + (极其偶尔的引经据典升华) + 锋利结论`;
+
+    const userPrompt = `【当前战区】
+辩题：${topicTitle}
+你的阵营：${stance === 'pro' ? '正方' : '反方'} —— ${stanceLabel}
+${proStance && conStance ? `对手阵营：${stance === 'pro' ? conStance : proStance}` : ''}
+
+最近战场交锋记录：
+${contextMessages || '（首发开局，尚无交锋记录）'}
+
+${replyTo ? `【你必须回应的攻击】\n${replyTo}` : ''}
+
+直接入戏，开口即交锋。`;
 
     return await this.chatCompletion({
       messages: [
-        { role: 'system', content: npcPrompt },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      temperature: 0.9,
-      max_tokens: 300,
+      temperature: 0.92,
+      max_tokens: 200,
     });
   }
 

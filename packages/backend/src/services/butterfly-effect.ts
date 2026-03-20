@@ -55,9 +55,8 @@ class ButterflyEffectService {
 
     console.log(`🦋 Starting butterfly effect for comment ${trigger_comment_id}`);
 
-    // 获取话题信息
     const topicResult = await db.query(
-      `SELECT title FROM topics WHERE topic_id = $1`,
+      `SELECT title, pro_stance, con_stance FROM topics WHERE topic_id = $1`,
       [topic_id]
     );
     
@@ -65,7 +64,7 @@ class ButterflyEffectService {
       throw new Error(`Topic ${topic_id} not found`);
     }
 
-    const topicTitle = topicResult.rows[0].title;
+    const { title: topicTitle, pro_stance: proStance, con_stance: conStance } = topicResult.rows[0];
 
     // 获取触发评论
     const triggerCommentResult = await db.query(
@@ -90,25 +89,26 @@ class ButterflyEffectService {
 
       const recentComments = recentCommentsResult.rows;
 
-      // Step 1: 敌方NPC反击 (3秒内)
       await this.generateEnemyResponse(
         topic_id,
         topicTitle,
         user_stance === 'pro' ? 'con' : 'pro',
         recentComments,
-        triggerContent
+        triggerContent,
+        proStance,
+        conStance
       );
 
-      // 短暂延迟模拟思考
       await this.sleep(1000);
 
-      // Step 2: 友方NPC支援 (5秒内)
       await this.generateAllyResponse(
         topic_id,
         topicTitle,
         user_stance,
         recentComments,
-        triggerContent
+        triggerContent,
+        proStance,
+        conStance
       );
 
       // Step 3: 每2轮进行一次AI裁决
@@ -128,9 +128,10 @@ class ButterflyEffectService {
     topicTitle: string,
     stance: 'pro' | 'con',
     recentComments: any[],
-    triggerContent: string
+    triggerContent: string,
+    proStance?: string,
+    conStance?: string
   ) {
-    // 从对立阵营随机选择NPC
     const npcResult = await db.query(
       `SELECT npc_id, name, system_prompt FROM npcs ORDER BY RANDOM() LIMIT 1`
     );
@@ -139,11 +140,13 @@ class ButterflyEffectService {
 
     const npc = npcResult.rows[0];
 
-    // 生成反击内容
     const content = await aiService.generateNPCResponse({
       npcPrompt: npc.system_prompt,
+      npcName: npc.name,
       topicTitle,
       stance,
+      proStance,
+      conStance,
       recentComments,
       replyTo: `用户刚说了：${triggerContent}，你需要从${stance === 'pro' ? '正' : '反'}方立场犀利反驳`,
     });
@@ -175,9 +178,10 @@ class ButterflyEffectService {
     topicTitle: string,
     stance: 'pro' | 'con',
     recentComments: any[],
-    triggerContent: string
+    triggerContent: string,
+    proStance?: string,
+    conStance?: string
   ) {
-    // 从同阵营随机选择NPC
     const npcResult = await db.query(
       `SELECT npc_id, name, system_prompt FROM npcs ORDER BY RANDOM() LIMIT 1`
     );
@@ -186,11 +190,13 @@ class ButterflyEffectService {
 
     const npc = npcResult.rows[0];
 
-    // 生成支援内容
     const content = await aiService.generateNPCResponse({
       npcPrompt: npc.system_prompt,
+      npcName: npc.name,
       topicTitle,
       stance,
+      proStance,
+      conStance,
       recentComments,
       replyTo: `用户刚说了：${triggerContent}，你需要肯定并补充观点`,
     });

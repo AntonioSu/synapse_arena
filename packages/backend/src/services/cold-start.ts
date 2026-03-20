@@ -59,11 +59,13 @@ class ColdStartService {
         // 如果是回复上一条，传入上一条内容
         const replyTo = comments.length > 0 ? comments[comments.length - 1].content : undefined;
 
-        // 生成AI回复
         const content = await aiService.generateNPCResponse({
           npcPrompt: currentNPC.system_prompt,
+          npcName: currentNPC.name,
           topicTitle: topic.title,
           stance,
+          proStance: topic.pro_stance,
+          conStance: topic.con_stance,
           recentComments,
           replyTo,
         });
