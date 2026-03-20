@@ -69,10 +69,6 @@ export default function CommentInput({ topicId }: Props) {
 
   return (
     <div className="cyber-card p-4 sm:p-6 space-y-4">
-      <div className="text-[10px] text-gray-400 font-mono select-none">
-        {'// USER_INPUT_TERMINAL'}
-      </div>
-
       <AnimatePresence mode="wait">
         {!stance && (
           <motion.div

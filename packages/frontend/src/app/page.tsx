@@ -167,13 +167,6 @@ export default function Home() {
         </AnimatePresence>
       </main>
 
-      <footer className="sticky bottom-0 z-30 border-t border-gray-200 bg-white/85 backdrop-blur-md" role="contentinfo">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between text-[10px] text-gray-400 font-mono">
-          <span>TX_OK | LATENCY: 12ms</span>
-          <span className="hidden sm:inline">ONLINE_AGENTS: {topics.length * 2}</span>
-          <span>POWERED_BY: ZHIHU_API</span>
-        </div>
-      </footer>
     </div>
   );
 }
