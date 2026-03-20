@@ -49,7 +49,7 @@ export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Pro
       >
         {topics.map((topic, index) => (
           <SwiperSlide key={topic.topic_id}>
-            <div className="py-6 sm:py-8">
+            <div className="py-6 sm:py-8 bg-white">
               <div className="text-center mb-6">
                 <div className="text-[10px] text-gray-400 mb-2 font-mono">
                   TOPIC #{index + 1}
@@ -84,17 +84,31 @@ export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Pro
       </Swiper>
 
       <style jsx global>{`
+        .topic-swiper {
+          position: relative;
+        }
+        .topic-swiper .swiper-slide:not(.swiper-slide-active) {
+          opacity: 0 !important;
+          pointer-events: none;
+        }
         .topic-swiper .swiper-button-next,
         .topic-swiper .swiper-button-prev {
           color: rgba(0, 160, 200, 0.5);
           width: 36px;
           height: 36px;
-          transition: color 0.2s, transform 0.2s;
+          top: 50%;
+          transform: translateY(-50%);
+          transition: color 0.2s;
+        }
+        .topic-swiper .swiper-button-prev {
+          left: -4px;
+        }
+        .topic-swiper .swiper-button-next {
+          right: -4px;
         }
         .topic-swiper .swiper-button-next:hover,
         .topic-swiper .swiper-button-prev:hover {
           color: rgba(0, 160, 200, 0.9);
-          transform: scale(1.1);
         }
         .topic-swiper .swiper-button-next::after,
         .topic-swiper .swiper-button-prev::after {
