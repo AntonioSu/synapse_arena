@@ -24,7 +24,7 @@ class ColdStartService {
 
       // 1. 获取话题信息
       const topicResult = await db.query(
-        `SELECT topic_id, title, pro_stance, con_stance FROM topics WHERE topic_id = $1`,
+        `SELECT topic_id, title, pro_stance, con_stance, background FROM topics WHERE topic_id = $1`,
         [topicId]
       );
 
@@ -66,6 +66,7 @@ class ColdStartService {
           stance,
           proStance: topic.pro_stance,
           conStance: topic.con_stance,
+          topicBackground: topic.background,
           recentComments,
           replyTo,
         });

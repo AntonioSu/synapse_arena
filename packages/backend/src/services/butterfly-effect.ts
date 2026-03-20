@@ -56,7 +56,7 @@ class ButterflyEffectService {
     console.log(`🦋 Starting butterfly effect for comment ${trigger_comment_id}`);
 
     const topicResult = await db.query(
-      `SELECT title, pro_stance, con_stance FROM topics WHERE topic_id = $1`,
+      `SELECT title, pro_stance, con_stance, background FROM topics WHERE topic_id = $1`,
       [topic_id]
     );
     
@@ -64,7 +64,7 @@ class ButterflyEffectService {
       throw new Error(`Topic ${topic_id} not found`);
     }
 
-    const { title: topicTitle, pro_stance: proStance, con_stance: conStance } = topicResult.rows[0];
+    const { title: topicTitle, pro_stance: proStance, con_stance: conStance, background: topicBackground } = topicResult.rows[0];
 
     // 获取触发评论
     const triggerCommentResult = await db.query(
@@ -96,7 +96,8 @@ class ButterflyEffectService {
         recentComments,
         triggerContent,
         proStance,
-        conStance
+        conStance,
+        topicBackground
       );
 
       await this.sleep(1000);
@@ -108,7 +109,8 @@ class ButterflyEffectService {
         recentComments,
         triggerContent,
         proStance,
-        conStance
+        conStance,
+        topicBackground
       );
 
       // Step 3: 每2轮进行一次AI裁决
@@ -130,7 +132,8 @@ class ButterflyEffectService {
     recentComments: any[],
     triggerContent: string,
     proStance?: string,
-    conStance?: string
+    conStance?: string,
+    topicBackground?: string
   ) {
     const npcResult = await db.query(
       `SELECT npc_id, name, system_prompt FROM npcs ORDER BY RANDOM() LIMIT 1`
@@ -147,6 +150,7 @@ class ButterflyEffectService {
       stance,
       proStance,
       conStance,
+      topicBackground,
       recentComments,
       replyTo: `用户刚说了：${triggerContent}，你需要从${stance === 'pro' ? '正' : '反'}方立场犀利反驳`,
     });
@@ -180,7 +184,8 @@ class ButterflyEffectService {
     recentComments: any[],
     triggerContent: string,
     proStance?: string,
-    conStance?: string
+    conStance?: string,
+    topicBackground?: string
   ) {
     const npcResult = await db.query(
       `SELECT npc_id, name, system_prompt FROM npcs ORDER BY RANDOM() LIMIT 1`
@@ -197,6 +202,7 @@ class ButterflyEffectService {
       stance,
       proStance,
       conStance,
+      topicBackground,
       recentComments,
       replyTo: `用户刚说了：${triggerContent}，你需要肯定并补充观点`,
     });

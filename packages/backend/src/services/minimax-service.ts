@@ -91,10 +91,11 @@ class MiniMaxService {
     stance: 'pro' | 'con';
     proStance?: string;
     conStance?: string;
+    topicBackground?: string;
     recentComments: Array<{ author_name: string; content: string; stance: string }>;
     replyTo?: string;
   }): Promise<string> {
-    const { npcPrompt, npcName, topicTitle, stance, proStance, conStance, recentComments, replyTo } = params;
+    const { npcPrompt, npcName, topicTitle, stance, proStance, conStance, topicBackground, recentComments, replyTo } = params;
 
     const stanceLabel = stance === 'pro'
       ? (proStance || '正方（支持）')
@@ -124,10 +125,11 @@ ${npcPrompt}
 - 指出逻辑谬误（如滑坡谬误、虚假二分法） + 跨学科视角的降维解读
 - 结合痛点的现实共情 + (极其偶尔的引经据典升华) + 锋利结论`;
 
-    const userPrompt = `【当前战区】
+    const userPrompt = `【当前战区背景资料】
 辩题：${topicTitle}
 你的阵营：${stance === 'pro' ? '正方' : '反方'} —— ${stanceLabel}
 ${proStance && conStance ? `对手阵营：${stance === 'pro' ? conStance : proStance}` : ''}
+${topicBackground ? `核心事实与现实语境：${topicBackground}` : ''}
 
 最近战场交锋记录：
 ${contextMessages || '（首发开局，尚无交锋记录）'}

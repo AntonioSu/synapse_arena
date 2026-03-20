@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS topics (
   title VARCHAR(500) NOT NULL,
   pro_stance VARCHAR(200),
   con_stance VARCHAR(200),
+  background TEXT,
   zhihu_link TEXT,
   heat_score BIGINT DEFAULT 0,
   category VARCHAR(20) DEFAULT 'hot',
