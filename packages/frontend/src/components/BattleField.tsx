@@ -8,12 +8,7 @@ import { socketService } from '@/lib/socket';
 import CommentBubble from './CommentBubble';
 import CommentInput from './CommentInput';
 import BattleProgress from './BattleProgress';
-
-interface Topic {
-  topic_id: string;
-  title: string;
-  battle_state: any;
-}
+import type { Topic } from '@/types';
 
 interface Props {
   topic: Topic;
@@ -129,15 +124,8 @@ export default function BattleField({ topic }: Props) {
         )}
       </section>
 
-      {user ? (
-        <CommentInput topicId={topic.topic_id} />
-      ) : (
-        <div className="cyber-card p-4 text-center">
-          <p className="text-gray-500 text-sm">
-            {'\u767b\u5f55\u540e\u65b9\u53ef\u53c2\u4e0e\u8fa9\u8bba'}
-          </p>
-        </div>
-      )}
+      {/* 允许匿名评论 */}
+      <CommentInput topicId={topic.topic_id} />
     </div>
   );
 }

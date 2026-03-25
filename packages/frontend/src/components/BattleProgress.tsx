@@ -1,26 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-
-interface AIJudgeResult {
-  pro_score: number;
-  con_score: number;
-  affirmative_summary?: string;
-  negative_summary?: string;
-  human_insight?: string | null;
-  current_winner?: string;
-  verdict_reason?: string;
-  last_report?: string;
-}
-
-interface BattleState {
-  pro_count: number;
-  con_count: number;
-  pro_votes: number;
-  con_votes: number;
-  human_participants?: number;
-  ai_judge_result?: AIJudgeResult;
-}
+import type { BattleState } from '@/types';
 
 interface Props {
   battleState: BattleState;

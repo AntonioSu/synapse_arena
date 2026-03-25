@@ -12,6 +12,7 @@ import { topicCrawler } from './services/topic-crawler';
 import topicsRouter from './routes/topics';
 import commentsRouter from './routes/comments';
 import authRouter from './routes/auth';
+import { errorHandler } from './middleware/async-handler';
 
 const app = express();
 const httpServer = createServer(app);
@@ -46,6 +47,9 @@ app.use('/api/auth', authRouter);
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Global error handler (must be after routes)
+app.use(errorHandler);
 
 // Socket.io connection handling
 io.on('connection', (socket) => {

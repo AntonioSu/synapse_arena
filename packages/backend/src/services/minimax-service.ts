@@ -58,30 +58,21 @@ class MiniMaxService {
     }
   }
 
-  // 模拟响应，用于测试和降级
+  private static readonly MOCK_HANDLERS: Array<{ test: RegExp; response: () => string }> = [
+    { test: /正方|支持/, response: () => '从理性角度来看，这个观点确实有其合理性。但我们也要考虑实际情况的复杂性。' },
+    { test: /反方|反对/, response: () => '我理解你的顾虑，不过换个角度思考，也许事情没有那么糟糕。' },
+    { test: /评分|维度/, response: () => JSON.stringify({
+      pro_score: Math.floor(Math.random() * 30) + 40,
+      con_score: Math.floor(Math.random() * 30) + 40,
+      report: '双方势均力敌，战况胶着',
+    })},
+    { test: /话题|筛选/, response: () => JSON.stringify({ topics: [] }) },
+  ];
+
   private mockResponse(messages: Array<{ role: string; content: string }>): string {
     const lastMessage = messages[messages.length - 1]?.content || '';
-    
-    // 简单的模拟逻辑
-    if (lastMessage.includes('正方') || lastMessage.includes('支持')) {
-      return '从理性角度来看，这个观点确实有其合理性。但我们也要考虑实际情况的复杂性。';
-    } else if (lastMessage.includes('反方') || lastMessage.includes('反对')) {
-      return '我理解你的顾虑，不过换个角度思考，也许事情没有那么糟糕。';
-    } else if (lastMessage.includes('评分') || lastMessage.includes('维度')) {
-      // 战况评判返回JSON
-      return JSON.stringify({
-        pro_score: Math.floor(Math.random() * 30) + 40,
-        con_score: Math.floor(Math.random() * 30) + 40,
-        report: '双方势均力敌，战况胶着'
-      });
-    } else if (lastMessage.includes('话题') || lastMessage.includes('筛选')) {
-      // 话题筛选返回JSON
-      return JSON.stringify({
-        topics: []
-      });
-    }
-    
-    return '这是一个值得深思的问题，让我们理性讨论一下。';
+    return MiniMaxService.MOCK_HANDLERS.find(h => h.test.test(lastMessage))?.response()
+      ?? '这是一个值得深思的问题，让我们理性讨论一下。';
   }
 
   async generateNPCResponse(params: {

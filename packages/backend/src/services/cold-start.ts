@@ -1,6 +1,6 @@
 import { db } from '../db/client';
 import { aiService } from './minimax-service';
-import { redisClient } from './redis-client';
+import { performJudgement } from './judgement-service';
 import { v4 as uuidv4 } from 'uuid';
 
 interface NPC {
@@ -42,7 +42,7 @@ class ColdStartService {
       console.log(`⚔️  ${proNPC.name} (正方) VS ${conNPC.name} (反方)`);
 
       // 3. 开始80轮对战
-      const comments: Array<{ content: string; npc: NPC; stance: 'pro' | 'con' }> = [];
+      const comments: Array<{ content: string; npc: NPC; stance: 'pro' | 'con'; author_type?: string; author_name?: string }> = [];
 
       for (let i = 0; i < rounds; i++) {
         const isProTurn = i % 2 === 0;
@@ -91,7 +91,7 @@ class ColdStartService {
 
         // 每10轮进行一次AI裁决
         if ((i + 1) % 10 === 0) {
-          await this.performJudgement(topicId, comments);
+          await this.runJudgement(topicId, comments);
         }
       }
 
@@ -102,46 +102,20 @@ class ColdStartService {
     }
   }
 
-  private async performJudgement(
+  private async runJudgement(
     topicId: string,
     comments: Array<{ content: string; stance: 'pro' | 'con'; author_type?: string; author_name?: string }>
   ) {
-    const proComments = comments.filter((c) => c.stance === 'pro');
-    const conComments = comments.filter((c) => c.stance === 'con');
-
     const topicResult = await db.query(`SELECT title FROM topics WHERE topic_id = $1`, [topicId]);
     const topicTitle = topicResult.rows[0]?.title || '';
 
-    const judgement = await aiService.judgeDebate({
-      topicTitle,
-      proComments,
-      conComments,
+    const result = await performJudgement({
+      topicId, topicTitle,
+      proComments: comments.filter((c) => c.stance === 'pro'),
+      conComments: comments.filter((c) => c.stance === 'con'),
     });
 
-    const judgeResult = {
-      pro_score: judgement.pro_score,
-      con_score: judgement.con_score,
-      affirmative_summary: judgement.affirmative_summary,
-      negative_summary: judgement.negative_summary,
-      human_insight: judgement.human_insight,
-      current_winner: judgement.current_winner,
-      verdict_reason: judgement.verdict_reason,
-    };
-
-    await redisClient.updateBattleScore(topicId, {
-      pro_count: judgement.pro_score,
-      con_count: judgement.con_score,
-      ai_judge_result: judgeResult,
-    });
-
-    await db.query(
-      `INSERT INTO battle_states (topic_id, pro_score, con_score, judge_report)
-       VALUES ($1, $2, $3, $4)`,
-      [topicId, judgement.pro_score, judgement.con_score, judgement.verdict_reason]
-    );
-
-    console.log(`⚖️  Judgement: Pro ${judgement.pro_score} - Con ${judgement.con_score}`);
-    console.log(`📢 Verdict: ${judgement.verdict_reason}`);
+    console.log(`📢 Verdict: ${result.verdict_reason}`);
   }
 
   async startColdStartForAllNewTopics() {

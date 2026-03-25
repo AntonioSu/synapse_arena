@@ -18,7 +18,7 @@ export default function CommentInput({ topicId }: Props) {
   const [showAiPreview, setShowAiPreview] = useState(false);
 
   const handleSubmit = async () => {
-    if (!content.trim() || !stance || !user) return;
+    if (!content.trim() || !stance) return;
 
     try {
       setIsLoading(true);
@@ -26,7 +26,7 @@ export default function CommentInput({ topicId }: Props) {
         topic_id: topicId,
         content: content.trim(),
         stance,
-        user_id: user.user_id,
+        user_id: user?.user_id || 'anonymous',
       });
       setContent('');
       setStance(null);
@@ -38,14 +38,14 @@ export default function CommentInput({ topicId }: Props) {
   };
 
   const handleAIAssist = async () => {
-    if (!stance || !user) return;
+    if (!stance) return;
 
     try {
       setIsLoading(true);
       const response = await commentsAPI.aiAssist({
         topic_id: topicId,
         stance,
-        user_id: user.user_id,
+        user_id: user?.user_id || 'anonymous',
       });
 
       if (response.data.success) {

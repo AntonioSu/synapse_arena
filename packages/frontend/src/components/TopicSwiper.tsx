@@ -6,21 +6,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-fade';
-
-interface Topic {
-  topic_id: string;
-  title: string;
-  pro_stance: string;
-  con_stance: string;
-  category?: string;
-  battle_state: {
-    pro_count: number;
-    con_count: number;
-    pro_votes: number;
-    con_votes: number;
-    human_participants: number;
-  };
-}
+import type { Topic } from '@/types';
 
 interface Props {
   topics: Topic[];

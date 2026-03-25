@@ -1,37 +1,5 @@
 import { create } from 'zustand';
-
-interface User {
-  user_id: string;
-  username: string;
-  avatar_url: string;
-  soft_memory: any;
-}
-
-interface Topic {
-  topic_id: string;
-  title: string;
-  pro_stance: string;
-  con_stance: string;
-  category?: string;
-  battle_state: {
-    pro_count: number;
-    con_count: number;
-    pro_votes: number;
-    con_votes: number;
-    human_participants: number;
-  };
-}
-
-interface Comment {
-  comment_id: string;
-  author_type: 'human' | 'npc';
-  author_id: string;
-  author_name: string;
-  content: string;
-  stance: 'pro' | 'con';
-  reply_to?: string;
-  created_at: string;
-}
+import type { User, Topic, Comment } from '@/types';
 
 interface Store {
   user: User | null;
