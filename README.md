@@ -78,8 +78,7 @@ cd ../..
 
 ### 3. 配置环境变量
 
-复制 `.env.example` 为 `.env`，填写以下配置：
-
+**后端配置** (`packages/backend/.env`)：
 ```env
 # 数据库
 DATABASE_URL=postgresql://user:xxx@localhost:5432/synapse_arena
@@ -97,6 +96,18 @@ SECONDME_CLIENT_SECRET=your_client_secret
 
 # OpenAI
 OPENAI_API_KEY=your_openai_api_key
+```
+
+**前端配置** (`packages/frontend/.env.local`)：
+```env
+NEXT_PUBLIC_API_URL=
+
+# SecondMe OAuth 配置
+NEXT_PUBLIC_SECONDME_CLIENT_ID=your_client_id
+NEXT_PUBLIC_SECONDME_REDIRECT_URI=http://localhost:3000/auth/callback
+
+# 是否启用登录验证（true=需要登录，false=匿名访问）
+NEXT_PUBLIC_ENABLE_AUTH=false
 ```
 
 ### 4. 初始化数据库
@@ -120,6 +131,34 @@ npm run dev
 # 或分别启动
 npm run dev:backend  # 后端: http://localhost:8080
 npm run dev:frontend # 前端: http://localhost:3000
+```
+
+## ⚙️ 配置说明
+
+### 登录验证开关
+
+通过 `NEXT_PUBLIC_ENABLE_AUTH` 环境变量控制是否需要登录：
+
+- **`false`（默认）**：允许匿名访问和评论
+  - 用户无需登录即可查看辩论
+  - 匿名用户可以发表评论和使用 AI 分身
+  - 评论将显示为"匿名观众"
+
+- **`true`**：需要 SecondMe 登录
+  - 必须登录后才能查看和参与辩论
+  - 使用用户的软记忆生成个性化 AI 回复
+  - 评论显示真实用户名
+
+**切换方式**：
+```bash
+# 修改 packages/frontend/.env.local
+NEXT_PUBLIC_ENABLE_AUTH=true   # 启用登录
+# 或
+NEXT_PUBLIC_ENABLE_AUTH=false  # 允许匿名
+
+# 重启前端服务
+cd packages/frontend
+npm run dev
 ```
 
 ## 📖 API文档

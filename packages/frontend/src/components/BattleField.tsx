@@ -38,6 +38,9 @@ export default function BattleField({ topic }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const skipScrollRef = useRef(false);
+  
+  // 是否启用登录验证
+  const enableAuth = process.env.NEXT_PUBLIC_ENABLE_AUTH === 'true';
 
   useEffect(() => {
     loadComments();
@@ -124,8 +127,16 @@ export default function BattleField({ topic }: Props) {
         )}
       </section>
 
-      {/* 允许匿名评论 */}
-      <CommentInput topicId={topic.topic_id} />
+      {/* 评论输入框 - 根据 enableAuth 控制 */}
+      {enableAuth && !user ? (
+        <div className="cyber-card p-4 text-center">
+          <p className="text-gray-500 text-sm">
+            {'\u767b\u5f55\u540e\u65b9\u53ef\u53c2\u4e0e\u8fa9\u8bba'}
+          </p>
+        </div>
+      ) : (
+        <CommentInput topicId={topic.topic_id} />
+      )}
     </div>
   );
 }

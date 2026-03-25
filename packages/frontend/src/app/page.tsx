@@ -15,6 +15,9 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+  
+  // 是否启用登录验证（从环境变量读取，默认为 false）
+  const enableAuth = process.env.NEXT_PUBLIC_ENABLE_AUTH === 'true';
 
   useEffect(() => {
     loadTopics('all');
@@ -87,8 +90,8 @@ export default function Home() {
         </div>
       </header>
 
-      {/* SecondMe 登录已注释 - 允许匿名访问 */}
-      {/* {!user && (
+      {/* SecondMe 登录控制（通过 NEXT_PUBLIC_ENABLE_AUTH 环境变量） */}
+      {enableAuth && !user && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
           <div className="text-center cyber-card p-10 sm:p-12 max-w-sm">
             <div className="w-16 h-16 mx-auto mb-6 border border-cyan-300 rounded-full flex items-center justify-center">
@@ -105,7 +108,7 @@ export default function Home() {
             <LoginButton />
           </div>
         </div>
-      )} */}
+      )}
 
       <main className="flex-1 relative z-10 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-16">
         <AnimatePresence mode="wait">
