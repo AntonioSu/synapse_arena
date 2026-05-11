@@ -4,13 +4,14 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import { commentsAPI } from '@/lib/api';
+import type { Comment } from '@/types';
 
 interface Props {
   topicId: string;
 }
 
 export default function CommentInput({ topicId }: Props) {
-  const { user, setUser } = useStore();
+  const { user, setUser, addComment } = useStore();
   const [content, setContent] = useState('');
   const [stance, setStance] = useState<'pro' | 'con' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,6 +37,7 @@ export default function CommentInput({ topicId }: Props) {
     const userId = crypto.randomUUID();
     setUser({ user_id: userId, username: name, avatar_url: '', soft_memory: {} });
     localStorage.setItem('zhihu_username', name);
+    localStorage.setItem('zhihu_user_id', userId);
     setShowLoginModal(false);
     setUsernameInput('');
     if (pendingStance) {
@@ -49,12 +51,16 @@ export default function CommentInput({ topicId }: Props) {
 
     try {
       setIsLoading(true);
-      await commentsAPI.create({
+      const response = await commentsAPI.create({
         topic_id: topicId,
         content: content.trim(),
         stance,
         user_id: user?.user_id || 'anonymous',
+        username: user?.username,
       });
+      if (response.data.success) {
+        addComment(response.data.data as Comment);
+      }
       setContent('');
       setStance(null);
     } catch (error) {

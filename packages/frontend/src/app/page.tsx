@@ -17,8 +17,9 @@ export default function Home() {
 
   useEffect(() => {
     const savedName = localStorage.getItem('zhihu_username');
+    const savedId = localStorage.getItem('zhihu_user_id');
     if (savedName && !user) {
-      setUser({ user_id: savedName, username: savedName, avatar_url: '', soft_memory: {} });
+      setUser({ user_id: savedId || crypto.randomUUID(), username: savedName, avatar_url: '', soft_memory: {} });
     }
   }, []);
 

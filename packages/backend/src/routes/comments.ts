@@ -14,7 +14,8 @@ const createCommentSchema = z.object({
   content: z.string().min(1).max(500),
   stance: z.enum(['pro', 'con']),
   reply_to: z.string().uuid().optional(),
-  user_id: z.string(), // 允许 "anonymous"
+  user_id: z.string(),
+  username: z.string().optional(),
 });
 
 router.post('/', asyncHandler(async (req, res) => {
@@ -23,21 +24,29 @@ router.post('/', asyncHandler(async (req, res) => {
   let user: { user_id: string; username: string };
   
   if (data.user_id === 'anonymous') {
-    // 匿名用户
     user = {
       user_id: 'anonymous',
-      username: '匿名观众',
+      username: data.username || '匿名观众',
     };
   } else {
-    // 已登录用户
-    const userResult = await db.query(
-      `SELECT user_id, username FROM users WHERE user_id = $1`,
-      [data.user_id]
-    );
-    if (userResult.rows.length === 0) {
-      return res.status(401).json({ success: false, error: 'User not found' });
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let found = false;
+    if (uuidRegex.test(data.user_id)) {
+      const userResult = await db.query(
+        `SELECT user_id, username FROM users WHERE user_id = $1`,
+        [data.user_id]
+      );
+      if (userResult.rows.length > 0) {
+        found = true;
+        user = userResult.rows[0];
+      }
     }
-    user = userResult.rows[0];
+    if (!found) {
+      user = {
+        user_id: data.user_id,
+        username: data.username || '知乎用户',
+      };
+    }
   }
 
   const commentId = uuidv4();
@@ -75,12 +84,11 @@ router.post('/ai-assist', asyncHandler(async (req, res) => {
 
   let softMemory = {};
   
-  if (user_id !== 'anonymous') {
+  if (user_id && user_id !== 'anonymous') {
     const userResult = await db.query(`SELECT soft_memory FROM users WHERE user_id = $1`, [user_id]);
-    if (userResult.rows.length === 0) {
-      return res.status(401).json({ success: false, error: 'User not found' });
+    if (userResult.rows.length > 0) {
+      softMemory = userResult.rows[0].soft_memory || {};
     }
-    softMemory = userResult.rows[0].soft_memory || {};
   }
 
   const topicResult = await db.query(`SELECT title FROM topics WHERE topic_id = $1`, [topic_id]);

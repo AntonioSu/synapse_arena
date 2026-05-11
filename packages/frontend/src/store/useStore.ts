@@ -28,7 +28,10 @@ export const useStore = create<Store>((set) => ({
   setTopics: (topics) => set({ topics }),
   setCurrentTopic: (topic) => set({ currentTopic: topic }),
   setComments: (comments) => set({ comments }),
-  addComment: (comment) => set((state) => ({ comments: [...state.comments, comment] })),
+  addComment: (comment) => set((state) => {
+    if (state.comments.some((c) => c.comment_id === comment.comment_id)) return state;
+    return { comments: [...state.comments, comment] };
+  }),
   setLoading: (loading) => set({ isLoading: loading }),
   logout: () => {
     localStorage.removeItem('access_token');
