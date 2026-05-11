@@ -4,7 +4,7 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 export const config = {
-  port: parseInt(process.env.BACKEND_PORT || '8080', 10),
+  port: parseInt(process.env.BACKEND_PORT || '8081', 10),
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
   
   database: {
@@ -18,7 +18,7 @@ export const config = {
   zhihu: {
     appKey: process.env.ZHIHU_APP_KEY || '',
     appSecret: process.env.ZHIHU_APP_SECRET || '',
-    baseURL: 'https://openapi.zhihu.com',
+    baseURL: process.env.ZHIHU_BASE_URL || 'https://openapi.zhihu.com',
     ringIds: ['2001009660925334090', '2015023739549529606'],
   },
   
@@ -31,11 +31,26 @@ export const config = {
     tokenRefreshUrl: 'https://api.mindverse.com/gate/lab/api/oauth/token/refresh',
     apiUrl: 'https://api.mindverse.com/gate/lab',
   },
+
+  zhihuOAuth: {
+    clientId: process.env.ZHIHU_OAUTH_CLIENT_ID || process.env.ZHIHU_APP_KEY || '',
+    clientSecret: process.env.ZHIHU_OAUTH_CLIENT_SECRET || process.env.ZHIHU_APP_SECRET || '',
+    redirectUri: process.env.ZHIHU_OAUTH_REDIRECT_URI || 'http://localhost:3000/auth/callback',
+    authUrl: process.env.ZHIHU_OAUTH_AUTH_URL || 'https://www.zhihu.com/oauth2/authorize',
+    tokenUrl: process.env.ZHIHU_OAUTH_TOKEN_URL || 'https://www.zhihu.com/oauth2/token',
+    userInfoUrl: process.env.ZHIHU_OAUTH_USERINFO_URL || 'https://www.zhihu.com/api/v4/me',
+  },
   
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
   },
   
+  llm: {
+    apiUrl: process.env.LLM_API_URL || '',
+    apiKey: process.env.LLM_API_KEY || '',
+    model: process.env.LLM_MODEL || '',
+  },
+
   minimax: {
     apiKey: process.env.MINIMAX_API_KEY || '',
     groupId: process.env.MINIMAX_GROUP_ID || '',

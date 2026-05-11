@@ -3,13 +3,13 @@ import { config } from '../config';
 
 class MiniMaxService {
   private apiKey: string;
-  private groupId: string;
-  private baseURL: string;
+  private apiUrl: string;
+  private model: string;
 
   constructor() {
-    this.apiKey = config.minimax.apiKey;
-    this.groupId = config.minimax.groupId;
-    this.baseURL = config.minimax.baseURL;
+    this.apiKey = config.llm.apiKey;
+    this.apiUrl = config.llm.apiUrl.replace(/\/$/, '') + '/chat/completions';
+    this.model = config.llm.model;
   }
 
   private async chatCompletion(params: {
@@ -18,42 +18,34 @@ class MiniMaxService {
     temperature?: number;
     max_tokens?: number;
   }): Promise<string> {
-    const { messages, model = 'MiniMax-Text-01', temperature = 0.9, max_tokens = 512 } = params;
+    const { messages, model, temperature = 0.9, max_tokens = 512 } = params;
 
-    // 检查API密钥是否配置
     if (!this.apiKey || this.apiKey.length < 10) {
-      console.warn('⚠️  MiniMax API密钥未配置，使用模拟响应');
+      console.warn('⚠️  LLM API密钥未配置，使用模拟响应');
       return this.mockResponse(messages);
     }
 
     try {
-      // MiniMax API v1接口
       const response = await axios.post(
-        `${this.baseURL}/text/chatcompletion_v2`,
+        this.apiUrl,
         {
-          model,
+          model: model || this.model,
           messages,
           temperature,
           max_tokens,
-          top_p: 0.95,
         },
         {
           headers: {
             'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json',
           },
-          timeout: 30000,
+          timeout: 60000,
         }
       );
 
-      if (response.data?.base_resp?.status_code !== 0) {
-        throw new Error(`MiniMax API错误: ${response.data?.base_resp?.status_msg}`);
-      }
-
       return response.data?.choices?.[0]?.message?.content || '我需要思考一下...';
     } catch (error: any) {
-      console.error('MiniMax API调用失败:', error.response?.data || error.message);
-      // 降级到模拟响应
+      console.error('LLM API调用失败:', error.response?.data || error.message);
       return this.mockResponse(messages);
     }
   }

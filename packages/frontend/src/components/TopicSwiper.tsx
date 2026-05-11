@@ -34,9 +34,22 @@ export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Pro
           <SwiperSlide key={topic.topic_id}>
             <div className="py-6 sm:py-8 bg-white">
               <div className="text-center mb-6">
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-cyan-700 tracking-wide leading-snug px-4">
-                  {topic.title}
-                </h2>
+                {topic.zhihu_link ? (
+                  <a
+                    href={topic.zhihu_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="topic-title-link inline-block"
+                  >
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-cyan-700 tracking-wide leading-snug px-4">
+                      {topic.title}
+                    </h2>
+                  </a>
+                ) : (
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-cyan-700 tracking-wide leading-snug px-4">
+                    {topic.title}
+                  </h2>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -64,6 +77,22 @@ export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Pro
       </Swiper>
 
       <style jsx global>{`
+        .topic-title-link {
+          text-decoration: none;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .topic-title-link h2 {
+          text-decoration: none;
+          border-bottom: 2px solid transparent;
+          padding-bottom: 2px;
+          transition: border-color 0.15s ease, color 0.15s ease;
+          display: inline;
+        }
+        .topic-title-link:hover h2 {
+          border-bottom-color: rgba(0, 160, 200, 0.6);
+          color: rgb(0, 130, 170);
+        }
         .topic-swiper {
           position: relative;
         }

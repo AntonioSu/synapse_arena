@@ -24,6 +24,7 @@ export interface Topic {
   pro_stance: string;
   con_stance: string;
   category?: string;
+  zhihu_link?: string;
   battle_state: BattleState;
 }
 

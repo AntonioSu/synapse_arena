@@ -6,15 +6,21 @@ import { useStore } from '@/store/useStore';
 import { topicsAPI } from '@/lib/api';
 import TopicSwiper from '@/components/TopicSwiper';
 import BattleField from '@/components/BattleField';
-import LoginButton from '@/components/LoginButton';
 import CategoryTabs from '@/components/CategoryTabs';
 
 
 export default function Home() {
-  const { topics, setTopics, currentTopic, setCurrentTopic, user } = useStore();
+  const { topics, setTopics, currentTopic, setCurrentTopic, user, setUser } = useStore();
   const [isLoading, setIsLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const savedName = localStorage.getItem('zhihu_username');
+    if (savedName && !user) {
+      setUser({ user_id: savedName, username: savedName, avatar_url: '', soft_memory: {} });
+    }
+  }, []);
 
   useEffect(() => {
     loadTopics('all');
@@ -87,25 +93,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* SecondMe 登录已注释 - 允许匿名访问 */}
-      {/* {!user && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
-          <div className="text-center cyber-card p-10 sm:p-12 max-w-sm">
-            <div className="w-16 h-16 mx-auto mb-6 border border-cyan-300 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-              </svg>
-            </div>
-            <h2 className="text-cyan-700 text-xl font-bold mb-2">
-              {'\u8eab\u4efd\u9a8c\u8bc1'}
-            </h2>
-            <p className="text-gray-500 text-sm mb-6">
-              {'\u767b\u5f55\u540e\u89e3\u9501\u8fa9\u8bba\u573a'}
-            </p>
-            <LoginButton />
-          </div>
-        </div>
-      )} */}
+      {/* 登录按钮移至 CommentInput 组件内，未登录时显示知乎登录提示 */}
 
       <main className="flex-1 relative z-10 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-16">
         <AnimatePresence mode="wait">

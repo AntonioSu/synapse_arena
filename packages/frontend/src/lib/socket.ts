@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
 
 class SocketService {
   private socket: Socket | null = null;
