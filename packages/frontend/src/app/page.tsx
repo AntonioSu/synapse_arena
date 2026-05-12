@@ -13,6 +13,7 @@ import LoginButton from '@/components/LoginButton';
 export default function Home() {
   const { topics, setTopics, currentTopic, setCurrentTopic, user, setUser, logout } = useStore();
   const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
 
@@ -30,14 +31,20 @@ export default function Home() {
         })
         .catch(() => {
           localStorage.removeItem('access_token');
+        })
+        .finally(() => {
+          setIsCheckingAuth(false);
         });
+    } else {
+      setIsCheckingAuth(false);
     }
   }, []);
 
   useEffect(() => {
+    if (!user) return;
     loadTopics('all');
     loadCategories();
-  }, []);
+  }, [user]);
 
   const loadCategories = async () => {
     try {
@@ -78,6 +85,61 @@ export default function Home() {
     loadTopics(category);
   };
 
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+          <div className="w-12 h-12 mx-auto mb-4 border border-cyan-300 rounded-full flex items-center justify-center">
+            <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse" />
+          </div>
+          <div className="text-cyan-600 text-sm animate-pulse-glow font-mono">
+            {'[系统初始化...]'}
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col relative overflow-hidden">
+        <div className="fixed inset-0 bg-grid opacity-30 pointer-events-none" />
+        <div className="flex-1 flex items-center justify-center relative z-10 px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="cyber-card p-8 sm:p-12 max-w-sm w-full text-center"
+          >
+            <div className="w-16 h-16 mx-auto mb-6 border border-cyan-300 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+              </svg>
+            </div>
+
+            <h1 className="text-2xl font-bold text-cyan-600 text-glow tracking-wider mb-2">
+              AI{'辩论场'}
+            </h1>
+            <p className="text-gray-400 text-xs font-mono mb-1">SYNAPSE ARENA</p>
+            <p className="text-gray-500 text-sm mb-8">
+              {'登录后即可查看和参与 AI 辩论'}
+            </p>
+
+            <LoginButton />
+
+            <div className="mt-8 text-gray-400 text-[10px] font-mono">
+              AUTHENTICATION_REQUIRED
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden">
       <div className="fixed inset-0 bg-grid opacity-30 pointer-events-none" />
@@ -88,30 +150,24 @@ export default function Home() {
             AI{'辩论场'}
           </h1>
           <div className="flex items-center gap-3">
-            {user ? (
-              <>
-                <div className="flex items-center gap-2">
-                  {user.avatar_url && (
-                    <img
-                      src={user.avatar_url}
-                      alt={user.username}
-                      className="w-6 h-6 rounded-full border border-cyan-200"
-                    />
-                  )}
-                  <span className="text-cyan-700 text-sm font-medium max-w-[120px] truncate">
-                    {user.username}
-                  </span>
-                </div>
-                <button
-                  onClick={logout}
-                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {'退出'}
-                </button>
-              </>
-            ) : (
-              <LoginButton />
-            )}
+            <div className="flex items-center gap-2">
+              {user.avatar_url && (
+                <img
+                  src={user.avatar_url}
+                  alt={user.username}
+                  className="w-6 h-6 rounded-full border border-cyan-200"
+                />
+              )}
+              <span className="text-cyan-700 text-sm font-medium max-w-[120px] truncate">
+                {user.username}
+              </span>
+            </div>
+            <button
+              onClick={logout}
+              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              {'退出'}
+            </button>
           </div>
         </div>
       </header>
