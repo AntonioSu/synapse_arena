@@ -33,12 +33,12 @@ export const config = {
   },
 
   zhihuOAuth: {
-    clientId: process.env.ZHIHU_OAUTH_CLIENT_ID || process.env.ZHIHU_APP_KEY || '',
-    clientSecret: process.env.ZHIHU_OAUTH_CLIENT_SECRET || process.env.ZHIHU_APP_SECRET || '',
+    appId: process.env.ZHIHU_OAUTH_APP_ID || process.env.ZHIHU_APP_KEY || '',
+    appKey: process.env.ZHIHU_OAUTH_APP_KEY || process.env.ZHIHU_APP_SECRET || '',
     redirectUri: process.env.ZHIHU_OAUTH_REDIRECT_URI || 'http://localhost:3000/auth/callback',
-    authUrl: process.env.ZHIHU_OAUTH_AUTH_URL || 'https://www.zhihu.com/oauth2/authorize',
-    tokenUrl: process.env.ZHIHU_OAUTH_TOKEN_URL || 'https://www.zhihu.com/oauth2/token',
-    userInfoUrl: process.env.ZHIHU_OAUTH_USERINFO_URL || 'https://www.zhihu.com/api/v4/me',
+    authUrl: process.env.ZHIHU_OAUTH_AUTH_URL || 'https://openapi.zhihu.com/authorize',
+    tokenUrl: process.env.ZHIHU_OAUTH_TOKEN_URL || 'https://openapi.zhihu.com/access_token',
+    userInfoUrl: process.env.ZHIHU_OAUTH_USERINFO_URL || 'https://openapi.zhihu.com/user',
   },
   
   openai: {

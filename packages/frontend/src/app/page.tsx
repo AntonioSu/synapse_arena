@@ -3,23 +3,34 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
-import { topicsAPI } from '@/lib/api';
+import { topicsAPI, authAPI } from '@/lib/api';
 import TopicSwiper from '@/components/TopicSwiper';
 import BattleField from '@/components/BattleField';
 import CategoryTabs from '@/components/CategoryTabs';
+import LoginButton from '@/components/LoginButton';
 
 
 export default function Home() {
-  const { topics, setTopics, currentTopic, setCurrentTopic, user, setUser } = useStore();
+  const { topics, setTopics, currentTopic, setCurrentTopic, user, setUser, logout } = useStore();
   const [isLoading, setIsLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    const savedName = localStorage.getItem('zhihu_username');
-    const savedId = localStorage.getItem('zhihu_user_id');
-    if (savedName && !user) {
-      setUser({ user_id: savedId || crypto.randomUUID(), username: savedName, avatar_url: '', soft_memory: {} });
+    const token = localStorage.getItem('access_token');
+    if (token && !user) {
+      authAPI.getMe()
+        .then((res) => {
+          if (res.data.success) {
+            const { user_id, username, avatar_url, soft_memory } = res.data.data;
+            setUser({ user_id, username, avatar_url: avatar_url || '', soft_memory: soft_memory || {} });
+          } else {
+            localStorage.removeItem('access_token');
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem('access_token');
+        });
     }
   }, []);
 
@@ -72,29 +83,38 @@ export default function Home() {
       <div className="fixed inset-0 bg-grid opacity-30 pointer-events-none" />
 
       <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/85 backdrop-blur-md">
-        <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-center gap-20 sm:gap-36">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
           <h1 className="text-lg sm:text-2xl font-bold text-cyan-600 text-glow tracking-wider">
-            AI{'\u8fa9\u8bba\u573a'}
+            AI{'辩论场'}
           </h1>
-          {user && (
-            <div className="flex items-center gap-2">
-              <div
-                className="w-8 h-8 bg-cyan-100 border border-cyan-300 flex items-center justify-center overflow-hidden"
-                style={{ clipPath: 'polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)' }}
-              >
-                {user.avatar_url ? (
-                  <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-cyan-600 text-xs font-bold">{user.username[0]}</span>
-                )}
-              </div>
-              <span className="text-cyan-700 text-sm hidden sm:inline">{user.username}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {user ? (
+              <>
+                <div className="flex items-center gap-2">
+                  {user.avatar_url && (
+                    <img
+                      src={user.avatar_url}
+                      alt={user.username}
+                      className="w-6 h-6 rounded-full border border-cyan-200"
+                    />
+                  )}
+                  <span className="text-cyan-700 text-sm font-medium max-w-[120px] truncate">
+                    {user.username}
+                  </span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {'退出'}
+                </button>
+              </>
+            ) : (
+              <LoginButton />
+            )}
+          </div>
         </div>
       </header>
-
-      {/* 登录按钮移至 CommentInput 组件内，未登录时显示知乎登录提示 */}
 
       <main className="flex-1 relative z-10 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-16">
         <AnimatePresence mode="wait">

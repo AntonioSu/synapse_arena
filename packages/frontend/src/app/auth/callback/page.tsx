@@ -24,7 +24,7 @@ function AuthCallbackInner() {
       return;
     }
 
-    const code = searchParams.get('code');
+    const code = searchParams.get('code') || searchParams.get('authorization_code');
     const state = searchParams.get('state');
 
     if (!code) {
@@ -34,7 +34,7 @@ function AuthCallbackInner() {
 
     const savedState = sessionStorage.getItem('oauth_state');
     if (savedState) {
-      if (state !== savedState) {
+      if (state && state !== savedState) {
         console.error('OAuth state mismatch');
         sessionStorage.removeItem('oauth_state');
         router.push('/');

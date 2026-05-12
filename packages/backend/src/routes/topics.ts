@@ -33,7 +33,51 @@ router.get('/', asyncHandler(async (req, res) => {
 
   const topics = await Promise.all(
     result.rows.map(async (topic: any) => {
-      const battleState = await redisClient.getBattleState(topic.topic_id);
+      let battleState = await redisClient.getBattleState(topic.topic_id);
+
+      if (!battleState || (battleState.pro_count === 0 && battleState.con_count === 0) || !battleState.ai_judge_result) {
+        const [countsResult, latestJudge] = await Promise.all([
+          db.query(
+            `SELECT stance, COUNT(*) as cnt FROM comments WHERE topic_id = $1 GROUP BY stance`,
+            [topic.topic_id]
+          ),
+          db.query(
+            `SELECT pro_score, con_score, judge_report FROM battle_states
+             WHERE topic_id = $1 ORDER BY snapshot_at DESC LIMIT 1`,
+            [topic.topic_id]
+          ),
+        ]);
+
+        const counts: Record<string, number> = {};
+        for (const row of countsResult.rows) counts[row.stance] = parseInt(row.cnt);
+
+        if ((counts.pro || 0) + (counts.con || 0) > 0) {
+          const judge = latestJudge.rows[0];
+          let aiJudgeResult = battleState?.ai_judge_result;
+          if (!aiJudgeResult && judge?.judge_report) {
+            const proScore = judge.pro_score || 0;
+            const conScore = judge.con_score || 0;
+            aiJudgeResult = {
+              pro_score: proScore,
+              con_score: conScore,
+              current_winner: proScore > conScore ? 'AFFIRMATIVE' : proScore < conScore ? 'NEGATIVE' : 'TIE',
+              verdict_reason: judge.judge_report,
+            };
+          }
+
+          const fallback = {
+            pro_count: counts.pro || 0,
+            con_count: counts.con || 0,
+            pro_votes: battleState?.pro_votes || 0,
+            con_votes: battleState?.con_votes || 0,
+            human_participants: battleState?.human_participants || 0,
+            ai_judge_result: aiJudgeResult,
+          };
+          await redisClient.setBattleState(topic.topic_id, fallback);
+          battleState = fallback;
+        }
+      }
+
       return {
         ...topic,
         battle_state: battleState || { pro_count: 0, con_count: 0, pro_votes: 0, con_votes: 0 },

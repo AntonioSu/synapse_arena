@@ -14,7 +14,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🔧 Starting Backend..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-if pgrep -f "tsx.*watch.*src/index.ts" > /dev/null 2>&1; then
+if pgrep -u "$(whoami)" -f "tsx.*watch.*src/index.ts" > /dev/null 2>&1; then
   echo "  ⚠️  Backend already running, skipping"
 else
   cd "$PROJECT_ROOT/packages/backend"
@@ -33,7 +33,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🎨 Starting Frontend..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-if pgrep -f "next-server" > /dev/null 2>&1; then
+if pgrep -u "$(whoami)" -f "next-server" > /dev/null 2>&1; then
   echo "  ⚠️  Frontend already running, skipping"
 else
   cd "$PROJECT_ROOT/packages/frontend"

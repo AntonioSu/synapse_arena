@@ -5,8 +5,8 @@ export const config = {
     clientId: process.env.NEXT_PUBLIC_SECONDME_CLIENT_ID || '',
   },
   zhihu: {
-    authUrl: process.env.NEXT_PUBLIC_ZHIHU_OAUTH_AUTH_URL || 'https://www.zhihu.com/oauth2/authorize',
+    authUrl: process.env.NEXT_PUBLIC_ZHIHU_OAUTH_AUTH_URL || 'https://openapi.zhihu.com/authorize',
     redirectUri: process.env.NEXT_PUBLIC_ZHIHU_OAUTH_REDIRECT_URI || 'http://localhost:3000/auth/callback',
-    clientId: process.env.NEXT_PUBLIC_ZHIHU_OAUTH_CLIENT_ID || process.env.NEXT_PUBLIC_ZHIHU_APP_KEY || '',
+    appId: process.env.NEXT_PUBLIC_ZHIHU_OAUTH_APP_ID || '',
   },
 };

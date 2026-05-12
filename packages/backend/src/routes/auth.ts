@@ -117,42 +117,48 @@ router.post('/zhihu/callback', asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: 'Code is required' });
   }
 
+  console.log('[Zhihu OAuth] Exchanging code for token...');
   const tokenResponse = await fetch(config.zhihuOAuth.tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
+      app_id: config.zhihuOAuth.appId,
+      app_key: config.zhihuOAuth.appKey,
       grant_type: 'authorization_code',
-      code,
       redirect_uri: config.zhihuOAuth.redirectUri,
-      client_id: config.zhihuOAuth.clientId,
-      client_secret: config.zhihuOAuth.clientSecret,
+      code,
     }),
   });
 
   const tokenData: any = await tokenResponse.json();
+  console.log('[Zhihu OAuth] Token response:', JSON.stringify(tokenData));
+
   if (!tokenData.access_token) {
-    const err: any = new Error(tokenData.error_description || 'Failed to get Zhihu access token');
+    const errMsg = tokenData.data || tokenData.msg || tokenData.message || 'Failed to get Zhihu access token';
+    const err: any = new Error(errMsg);
     err.status = 400;
     throw err;
   }
 
   const accessToken = tokenData.access_token;
-  const refreshToken = tokenData.refresh_token || '';
 
+  console.log('[Zhihu OAuth] Fetching user info...');
   const userResponse = await fetch(config.zhihuOAuth.userInfoUrl, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
   const userInfo: any = await userResponse.json();
-  if (!userInfo.id) {
-    const err: any = new Error('Failed to get Zhihu user info');
+  console.log('[Zhihu OAuth] User info response:', JSON.stringify(userInfo));
+
+  if (userInfo.code && userInfo.code !== 0) {
+    const err: any = new Error(userInfo.data || 'Failed to get Zhihu user info');
     err.status = 400;
     throw err;
   }
 
-  const zhihuId = String(userInfo.id);
-  const username = userInfo.name || `zhihu_${zhihuId}`;
-  const avatarUrl = userInfo.avatar_url || '';
+  const zhihuId = String(userInfo.uid);
+  const username = userInfo.fullname || `zhihu_${zhihuId}`;
+  const avatarUrl = userInfo.avatar_path || '';
 
   const existing = await db.query(`SELECT user_id FROM users WHERE secondme_id = $1`, [zhihuId]);
 
@@ -160,16 +166,16 @@ router.post('/zhihu/callback', asyncHandler(async (req, res) => {
   if (existing.rows.length > 0) {
     userId = existing.rows[0].user_id;
     await db.query(
-      `UPDATE users SET username = $1, avatar_url = $2, access_token = $3, refresh_token = $4, updated_at = NOW()
-       WHERE user_id = $5`,
-      [username, avatarUrl, accessToken, refreshToken, userId]
+      `UPDATE users SET username = $1, avatar_url = $2, access_token = $3, updated_at = NOW()
+       WHERE user_id = $4`,
+      [username, avatarUrl, accessToken, userId]
     );
   } else {
     userId = uuidv4();
     await db.query(
-      `INSERT INTO users (user_id, secondme_id, username, avatar_url, access_token, refresh_token)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [userId, zhihuId, username, avatarUrl, accessToken, refreshToken]
+      `INSERT INTO users (user_id, secondme_id, username, avatar_url, access_token)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, zhihuId, username, avatarUrl, accessToken]
     );
   }
 

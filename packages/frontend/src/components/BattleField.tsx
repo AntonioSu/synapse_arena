@@ -34,7 +34,7 @@ function CommentSkeleton() {
 }
 
 export default function BattleField({ topic }: Props) {
-  const { comments, setComments, addComment, user } = useStore();
+  const { comments, setComments, addComment, updateBattleState, user } = useStore();
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const skipScrollRef = useRef(false);
@@ -77,7 +77,13 @@ export default function BattleField({ topic }: Props) {
     socketService.connect();
     socketService.joinBattle(topic.topic_id);
     socketService.onNewComment((comment) => addComment(comment));
-    socketService.onBattleUpdate(() => {});
+    socketService.onBattleUpdate((state) => {
+      updateBattleState({
+        pro_count: state.pro_score ?? state.pro_count,
+        con_count: state.con_score ?? state.con_count,
+        ai_judge_result: state.ai_judge_result,
+      });
+    });
   };
 
   const scrollToBottom = () => {

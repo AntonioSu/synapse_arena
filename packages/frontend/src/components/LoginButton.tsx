@@ -15,7 +15,7 @@ export default function LoginButton() {
     sessionStorage.setItem('oauth_provider', 'zhihu');
 
     const params = new URLSearchParams({
-      client_id: config.zhihu.clientId,
+      app_id: config.zhihu.appId,
       redirect_uri: config.zhihu.redirectUri,
       response_type: 'code',
       state,

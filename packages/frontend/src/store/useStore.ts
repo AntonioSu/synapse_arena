@@ -13,6 +13,7 @@ interface Store {
   setCurrentTopic: (topic: Topic | null) => void;
   setComments: (comments: Comment[]) => void;
   addComment: (comment: Comment) => void;
+  updateBattleState: (battleState: Partial<Topic['battle_state']>) => void;
   setLoading: (loading: boolean) => void;
   logout: () => void;
 }
@@ -32,9 +33,24 @@ export const useStore = create<Store>((set) => ({
     if (state.comments.some((c) => c.comment_id === comment.comment_id)) return state;
     return { comments: [...state.comments, comment] };
   }),
+  updateBattleState: (battleState) => set((state) => {
+    if (!state.currentTopic) return state;
+    const updated = {
+      ...state.currentTopic,
+      battle_state: { ...state.currentTopic.battle_state, ...battleState },
+    };
+    return {
+      currentTopic: updated,
+      topics: state.topics.map((t) =>
+        t.topic_id === updated.topic_id ? updated : t
+      ),
+    };
+  }),
   setLoading: (loading) => set({ isLoading: loading }),
   logout: () => {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('zhihu_username');
+    localStorage.removeItem('zhihu_user_id');
     set({ user: null });
   },
 }));

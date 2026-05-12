@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import { commentsAPI } from '@/lib/api';
+import LoginButton from '@/components/LoginButton';
 import type { Comment } from '@/types';
 
 interface Props {
@@ -11,38 +12,19 @@ interface Props {
 }
 
 export default function CommentInput({ topicId }: Props) {
-  const { user, setUser, addComment } = useStore();
+  const { user, addComment } = useStore();
   const [content, setContent] = useState('');
   const [stance, setStance] = useState<'pro' | 'con' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [aiContent, setAiContent] = useState('');
   const [showAiPreview, setShowAiPreview] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [pendingStance, setPendingStance] = useState<'pro' | 'con' | null>(null);
-  const [usernameInput, setUsernameInput] = useState('');
 
   const handleStanceClick = (s: 'pro' | 'con') => {
     if (user) {
       setStance(s);
     } else {
-      setPendingStance(s);
       setShowLoginModal(true);
-    }
-  };
-
-  const handleLoginSubmit = () => {
-    const name = usernameInput.trim();
-    if (!name) return;
-
-    const userId = crypto.randomUUID();
-    setUser({ user_id: userId, username: name, avatar_url: '', soft_memory: {} });
-    localStorage.setItem('zhihu_username', name);
-    localStorage.setItem('zhihu_user_id', userId);
-    setShowLoginModal(false);
-    setUsernameInput('');
-    if (pendingStance) {
-      setStance(pendingStance);
-      setPendingStance(null);
     }
   };
 
@@ -112,29 +94,14 @@ export default function CommentInput({ topicId }: Props) {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-cyan-700 text-lg font-bold mb-2 text-center">
-              {'\u77e5\u4e4e\u767b\u5f55'}
+              {'登录参与辩论'}
             </h3>
             <p className="text-gray-400 text-xs text-center mb-5">
-              {'\u8f93\u5165\u4f60\u7684\u77e5\u4e4e\u7528\u6237\u540d\u5373\u53ef\u53c2\u4e0e\u8fa9\u8bba'}
+              {'使用知乎账号登录后即可参与辩论'}
             </p>
-            <input
-              type="text"
-              value={usernameInput}
-              onChange={(e) => setUsernameInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLoginSubmit()}
-              placeholder={'\u77e5\u4e4e\u7528\u6237\u540d'}
-              className="w-full bg-gray-50 border border-gray-200 rounded p-3 text-sm text-gray-800
-                       placeholder:text-gray-400 transition-colors mb-4
-                       focus:outline-none focus:border-cyan-400 focus:bg-white focus:ring-1 focus:ring-cyan-400/20"
-              autoFocus
-            />
-            <button
-              onClick={handleLoginSubmit}
-              disabled={!usernameInput.trim()}
-              className="cyber-button primary w-full py-2.5 text-sm"
-            >
-              {'\u786e\u8ba4'}
-            </button>
+            <div className="flex justify-center">
+              <LoginButton />
+            </div>
           </motion.div>
         </div>
       )}
