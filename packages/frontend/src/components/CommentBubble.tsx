@@ -1,24 +1,10 @@
 'use client';
 
 import ReactMarkdown from 'react-markdown';
-
-interface Comment {
-  comment_id: string;
-  author_type: 'human' | 'npc';
-  author_name: string;
-  content: string;
-  stance: 'pro' | 'con';
-  created_at: string;
-}
+import type { Comment } from '@/types';
 
 interface Props {
   comment: Comment;
-}
-
-function microHash(id: string): string {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = ((h << 5) - h + id.charCodeAt(i)) | 0;
-  return '0x' + ((h >>> 0) & 0xffff).toString(16).toUpperCase().padStart(4, '0');
 }
 
 function formatTime(dateStr: string): string {
@@ -30,7 +16,6 @@ function formatTime(dateStr: string): string {
 export default function CommentBubble({ comment }: Props) {
   const isPro = comment.stance === 'pro';
   const isHuman = comment.author_type === 'human';
-  const hex = microHash(comment.comment_id);
 
   const borderColor = isHuman
     ? 'border-green-400'

@@ -7,33 +7,54 @@ import { coldStartService } from './cold-start';
 import { v4 as uuidv4 } from 'uuid';
 
 class TopicCrawlerService {
+  private static readonly SEARCH_QUERIES = [
+    '今天热议', '争议 观点', '该不该', '值不值得',
+    '怎么看 热搜', '反转 事件', '社会热点 讨论',
+  ];
+
+  private async fetchHotTopics(): Promise<Array<{ title: string; body: string; heat_score: number }>> {
+    // 优先尝试热榜 API
+    try {
+      const billboardData = await zhihuAPI.getBillboard(3, 24);
+      const list = billboardData.data?.list || [];
+      if (list.length > 0) {
+        console.log(`✅ Fetched ${list.length} topics from billboard`);
+        await redisClient.setCachedHotTopics(list, 3600);
+        return list.map((t: any) => ({ title: t.title, body: t.body, heat_score: t.heat_score }));
+      }
+    } catch (e: any) {
+      console.log(`⚠️  Billboard API unavailable (${e.message}), falling back to search`);
+    }
+
+    // 降级：用 search/global 搜多个争议关键词
+    const query = TopicCrawlerService.SEARCH_QUERIES[
+      Math.floor(Math.random() * TopicCrawlerService.SEARCH_QUERIES.length)
+    ];
+    console.log(`🔍 Searching Zhihu for: "${query}"`);
+    const searchData: any = await zhihuAPI.globalSearch(query, 10);
+    const items = (searchData.data?.items || []).filter((i: any) => i.title && i.content_text);
+    console.log(`✅ Fetched ${items.length} topics from search ("${query}")`);
+    return items.map((i: any) => ({
+      title: i.title,
+      body: (i.content_text || '').substring(0, 300),
+      heat_score: (i.vote_up_count || 0) * 100 + (i.comment_count || 0) * 50,
+    }));
+  }
+
   async fetchAndProcessTopics() {
     try {
-      console.log('🕷️  Fetching hot topics from Zhihu billboard...');
+      console.log('🕷️  Fetching hot topics from Zhihu...');
 
-      // 1. 获取知乎热榜前3个话题
-      const billboardData = await zhihuAPI.getBillboard(3, 24);
-      const hotTopics = billboardData.data.list;
+      const hotTopics = await this.fetchHotTopics();
 
-      if (!hotTopics || hotTopics.length === 0) {
+      if (hotTopics.length === 0) {
         console.log('⚠️  No hot topics fetched');
         return [];
       }
 
-      console.log(`✅ Fetched ${hotTopics.length} hot topics from billboard`);
-
-      // 缓存热榜数据
-      await redisClient.setCachedHotTopics(hotTopics, 3600);
-
-      // 2. AI筛选并生成可辩论的话题（正方 + 反方立场）
+      // AI筛选并生成可辩论的话题
       console.log('🤖 AI selecting controversial topics and generating debate stances...');
-      const selectedTopics = await aiService.selectControversialTopics(
-        hotTopics.map((t) => ({
-          title: t.title,
-          body: t.body,
-          heat_score: t.heat_score,
-        }))
-      );
+      const selectedTopics = await aiService.selectControversialTopics(hotTopics);
 
       console.log(`✅ AI selected ${selectedTopics.length} controversial topics`);
 

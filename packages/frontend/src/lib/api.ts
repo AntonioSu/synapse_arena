@@ -36,5 +36,6 @@ export const commentsAPI = {
 
 export const authAPI = {
   callback: (code: string) => api.post('/auth/secondme/callback', { code }),
+  zhihuCallback: (code: string) => api.post('/auth/zhihu/callback', { code }),
   getMe: () => api.get('/auth/me'),
 };

@@ -3,13 +3,13 @@ import { config } from '../config';
 
 class MiniMaxService {
   private apiKey: string;
-  private groupId: string;
-  private baseURL: string;
+  private apiUrl: string;
+  private model: string;
 
   constructor() {
-    this.apiKey = config.minimax.apiKey;
-    this.groupId = config.minimax.groupId;
-    this.baseURL = config.minimax.baseURL;
+    this.apiKey = config.llm.apiKey;
+    this.apiUrl = config.llm.apiUrl.replace(/\/$/, '') + '/chat/completions';
+    this.model = config.llm.model;
   }
 
   private async chatCompletion(params: {
@@ -18,70 +18,53 @@ class MiniMaxService {
     temperature?: number;
     max_tokens?: number;
   }): Promise<string> {
-    const { messages, model = 'MiniMax-Text-01', temperature = 0.9, max_tokens = 512 } = params;
+    const { messages, model, temperature = 0.9, max_tokens = 512 } = params;
 
-    // 检查API密钥是否配置
     if (!this.apiKey || this.apiKey.length < 10) {
-      console.warn('⚠️  MiniMax API密钥未配置，使用模拟响应');
+      console.warn('⚠️  LLM API密钥未配置，使用模拟响应');
       return this.mockResponse(messages);
     }
 
     try {
-      // MiniMax API v1接口
       const response = await axios.post(
-        `${this.baseURL}/text/chatcompletion_v2`,
+        this.apiUrl,
         {
-          model,
+          model: model || this.model,
           messages,
           temperature,
           max_tokens,
-          top_p: 0.95,
         },
         {
           headers: {
             'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json',
           },
-          timeout: 30000,
+          timeout: 60000,
         }
       );
 
-      if (response.data?.base_resp?.status_code !== 0) {
-        throw new Error(`MiniMax API错误: ${response.data?.base_resp?.status_msg}`);
-      }
-
       return response.data?.choices?.[0]?.message?.content || '我需要思考一下...';
     } catch (error: any) {
-      console.error('MiniMax API调用失败:', error.response?.data || error.message);
-      // 降级到模拟响应
+      console.error('LLM API调用失败:', error.response?.data || error.message);
       return this.mockResponse(messages);
     }
   }
 
-  // 模拟响应，用于测试和降级
+  private static readonly MOCK_HANDLERS: Array<{ test: RegExp; response: () => string }> = [
+    { test: /正方|支持/, response: () => '从理性角度来看，这个观点确实有其合理性。但我们也要考虑实际情况的复杂性。' },
+    { test: /反方|反对/, response: () => '我理解你的顾虑，不过换个角度思考，也许事情没有那么糟糕。' },
+    { test: /评分|维度/, response: () => JSON.stringify({
+      pro_score: Math.floor(Math.random() * 30) + 40,
+      con_score: Math.floor(Math.random() * 30) + 40,
+      report: '双方势均力敌，战况胶着',
+    })},
+    { test: /话题|筛选/, response: () => JSON.stringify({ topics: [] }) },
+  ];
+
   private mockResponse(messages: Array<{ role: string; content: string }>): string {
     const lastMessage = messages[messages.length - 1]?.content || '';
-    
-    // 简单的模拟逻辑
-    if (lastMessage.includes('正方') || lastMessage.includes('支持')) {
-      return '从理性角度来看，这个观点确实有其合理性。但我们也要考虑实际情况的复杂性。';
-    } else if (lastMessage.includes('反方') || lastMessage.includes('反对')) {
-      return '我理解你的顾虑，不过换个角度思考，也许事情没有那么糟糕。';
-    } else if (lastMessage.includes('评分') || lastMessage.includes('维度')) {
-      // 战况评判返回JSON
-      return JSON.stringify({
-        pro_score: Math.floor(Math.random() * 30) + 40,
-        con_score: Math.floor(Math.random() * 30) + 40,
-        report: '双方势均力敌，战况胶着'
-      });
-    } else if (lastMessage.includes('话题') || lastMessage.includes('筛选')) {
-      // 话题筛选返回JSON
-      return JSON.stringify({
-        topics: []
-      });
-    }
-    
-    return '这是一个值得深思的问题，让我们理性讨论一下。';
+    return MiniMaxService.MOCK_HANDLERS.find(h => h.test.test(lastMessage))?.response()
+      ?? '这是一个值得深思的问题，让我们理性讨论一下。';
   }
 
   async generateNPCResponse(params: {

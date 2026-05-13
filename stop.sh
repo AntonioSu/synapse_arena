@@ -7,7 +7,7 @@ safe_kill() {
   local pattern="$1"
   local label="$2"
   local pids
-  pids=$(pgrep -f "$pattern" 2>/dev/null)
+  pids=$(pgrep -u "$(whoami)" -f "$pattern" 2>/dev/null)
 
   if [ -z "$pids" ]; then
     echo "  ℹ️  No $label process found"
@@ -19,7 +19,7 @@ safe_kill() {
   sleep 2
 
   local remaining
-  remaining=$(pgrep -f "$pattern" 2>/dev/null)
+  remaining=$(pgrep -u "$(whoami)" -f "$pattern" 2>/dev/null)
   if [ -n "$remaining" ]; then
     echo "  ⚠️  Force killing remaining: $remaining"
     kill -9 $remaining 2>/dev/null

@@ -24,7 +24,7 @@ function AuthCallbackInner() {
       return;
     }
 
-    const code = searchParams.get('code');
+    const code = searchParams.get('code') || searchParams.get('authorization_code');
     const state = searchParams.get('state');
 
     if (!code) {
@@ -34,7 +34,7 @@ function AuthCallbackInner() {
 
     const savedState = sessionStorage.getItem('oauth_state');
     if (savedState) {
-      if (state !== savedState) {
+      if (state && state !== savedState) {
         console.error('OAuth state mismatch');
         sessionStorage.removeItem('oauth_state');
         router.push('/');
@@ -48,7 +48,12 @@ function AuthCallbackInner() {
 
   const handleCallback = async (code: string) => {
     try {
-      const response = await authAPI.callback(code);
+      const provider = sessionStorage.getItem('oauth_provider') || 'zhihu';
+      sessionStorage.removeItem('oauth_provider');
+
+      const response = provider === 'zhihu'
+        ? await authAPI.zhihuCallback(code)
+        : await authAPI.callback(code);
 
       if (response.data.success) {
         const { user_id, username, avatar_url, access_token } = response.data.data;
@@ -79,7 +84,7 @@ function AuthCallbackInner() {
           {'\u8eab\u4efd\u9a8c\u8bc1\u4e2d...'}
         </div>
         <div className="text-gray-400 text-[10px] font-mono">
-          AUTHENTICATING_WITH_SECONDME
+          AUTHENTICATING
         </div>
       </motion.div>
     </div>

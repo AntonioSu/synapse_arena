@@ -14,7 +14,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🔧 Starting Backend..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-if pgrep -f "tsx.*watch.*src/index.ts" > /dev/null 2>&1; then
+if pgrep -u "$(whoami)" -f "tsx.*watch.*src/index.ts" > /dev/null 2>&1; then
   echo "  ⚠️  Backend already running, skipping"
 else
   cd "$PROJECT_ROOT/packages/backend"
@@ -33,7 +33,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🎨 Starting Frontend..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-if pgrep -f "next-server" > /dev/null 2>&1; then
+if pgrep -u "$(whoami)" -f "next-server" > /dev/null 2>&1; then
   echo "  ⚠️  Frontend already running, skipping"
 else
   cd "$PROJECT_ROOT/packages/frontend"
@@ -52,10 +52,10 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🩺 Health Check"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/topics | grep -q "200"; then
-  echo "  ✅ Backend:  http://localhost:8080  OK"
+if curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/api/topics | grep -q "200"; then
+  echo "  ✅ Backend:  http://localhost:8081  OK"
 else
-  echo "  ❌ Backend:  http://localhost:8080  FAILED"
+  echo "  ❌ Backend:  http://localhost:8081  FAILED"
 fi
 
 if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -qE "200|307"; then

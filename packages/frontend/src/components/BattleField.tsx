@@ -8,12 +8,7 @@ import { socketService } from '@/lib/socket';
 import CommentBubble from './CommentBubble';
 import CommentInput from './CommentInput';
 import BattleProgress from './BattleProgress';
-
-interface Topic {
-  topic_id: string;
-  title: string;
-  battle_state: any;
-}
+import type { Topic } from '@/types';
 
 interface Props {
   topic: Topic;
@@ -39,7 +34,7 @@ function CommentSkeleton() {
 }
 
 export default function BattleField({ topic }: Props) {
-  const { comments, setComments, addComment, user } = useStore();
+  const { comments, setComments, addComment, updateBattleState, user } = useStore();
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const skipScrollRef = useRef(false);
@@ -82,7 +77,13 @@ export default function BattleField({ topic }: Props) {
     socketService.connect();
     socketService.joinBattle(topic.topic_id);
     socketService.onNewComment((comment) => addComment(comment));
-    socketService.onBattleUpdate(() => {});
+    socketService.onBattleUpdate((state) => {
+      updateBattleState({
+        pro_count: state.pro_score ?? state.pro_count,
+        con_count: state.con_score ?? state.con_count,
+        ai_judge_result: state.ai_judge_result,
+      });
+    });
   };
 
   const scrollToBottom = () => {
@@ -129,15 +130,8 @@ export default function BattleField({ topic }: Props) {
         )}
       </section>
 
-      {user ? (
-        <CommentInput topicId={topic.topic_id} />
-      ) : (
-        <div className="cyber-card p-4 text-center">
-          <p className="text-gray-500 text-sm">
-            {'\u767b\u5f55\u540e\u65b9\u53ef\u53c2\u4e0e\u8fa9\u8bba'}
-          </p>
-        </div>
-      )}
+      {/* 允许匿名评论 */}
+      <CommentInput topicId={topic.topic_id} />
     </div>
   );
 }

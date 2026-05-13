@@ -1,37 +1,5 @@
 import { create } from 'zustand';
-
-interface User {
-  user_id: string;
-  username: string;
-  avatar_url: string;
-  soft_memory: any;
-}
-
-interface Topic {
-  topic_id: string;
-  title: string;
-  pro_stance: string;
-  con_stance: string;
-  category?: string;
-  battle_state: {
-    pro_count: number;
-    con_count: number;
-    pro_votes: number;
-    con_votes: number;
-    human_participants: number;
-  };
-}
-
-interface Comment {
-  comment_id: string;
-  author_type: 'human' | 'npc';
-  author_id: string;
-  author_name: string;
-  content: string;
-  stance: 'pro' | 'con';
-  reply_to?: string;
-  created_at: string;
-}
+import type { User, Topic, Comment } from '@/types';
 
 interface Store {
   user: User | null;
@@ -45,6 +13,7 @@ interface Store {
   setCurrentTopic: (topic: Topic | null) => void;
   setComments: (comments: Comment[]) => void;
   addComment: (comment: Comment) => void;
+  updateBattleState: (battleState: Partial<Topic['battle_state']>) => void;
   setLoading: (loading: boolean) => void;
   logout: () => void;
 }
@@ -60,10 +29,28 @@ export const useStore = create<Store>((set) => ({
   setTopics: (topics) => set({ topics }),
   setCurrentTopic: (topic) => set({ currentTopic: topic }),
   setComments: (comments) => set({ comments }),
-  addComment: (comment) => set((state) => ({ comments: [...state.comments, comment] })),
+  addComment: (comment) => set((state) => {
+    if (state.comments.some((c) => c.comment_id === comment.comment_id)) return state;
+    return { comments: [...state.comments, comment] };
+  }),
+  updateBattleState: (battleState) => set((state) => {
+    if (!state.currentTopic) return state;
+    const updated = {
+      ...state.currentTopic,
+      battle_state: { ...state.currentTopic.battle_state, ...battleState },
+    };
+    return {
+      currentTopic: updated,
+      topics: state.topics.map((t) =>
+        t.topic_id === updated.topic_id ? updated : t
+      ),
+    };
+  }),
   setLoading: (loading) => set({ isLoading: loading }),
   logout: () => {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('zhihu_username');
+    localStorage.removeItem('zhihu_user_id');
     set({ user: null });
   },
 }));

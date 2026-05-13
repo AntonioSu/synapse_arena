@@ -2,6 +2,7 @@ import { Queue, Worker, Job } from 'bullmq';
 import { redisClient } from './redis-client';
 import { db } from '../db/client';
 import { aiService } from './minimax-service';
+import { performJudgement } from './judgement-service';
 import { v4 as uuidv4 } from 'uuid';
 import { io } from '../index';
 
@@ -89,33 +90,25 @@ class ButterflyEffectService {
 
       const recentComments = recentCommentsResult.rows;
 
-      await this.generateEnemyResponse(
-        topic_id,
-        topicTitle,
+      await this.generateNPCResponse(
+        topic_id, topicTitle,
         user_stance === 'pro' ? 'con' : 'pro',
-        recentComments,
-        triggerContent,
-        proStance,
-        conStance,
-        topicBackground
+        recentComments, triggerContent,
+        'enemy', proStance, conStance, topicBackground
       );
 
       await this.sleep(1000);
 
-      await this.generateAllyResponse(
-        topic_id,
-        topicTitle,
+      await this.generateNPCResponse(
+        topic_id, topicTitle,
         user_stance,
-        recentComments,
-        triggerContent,
-        proStance,
-        conStance,
-        topicBackground
+        recentComments, triggerContent,
+        'ally', proStance, conStance, topicBackground
       );
 
       // Step 3: 每2轮进行一次AI裁决
       if ((round + 1) % 2 === 0) {
-        await this.performJudgement(topic_id, topicTitle);
+        await this.runJudgement(topic_id, topicTitle);
       }
 
       // 短暂延迟
@@ -125,12 +118,13 @@ class ButterflyEffectService {
     console.log(`✅ Butterfly effect completed for ${topic_id}`);
   }
 
-  private async generateEnemyResponse(
+  private async generateNPCResponse(
     topicId: string,
     topicTitle: string,
     stance: 'pro' | 'con',
     recentComments: any[],
     triggerContent: string,
+    role: 'enemy' | 'ally',
     proStance?: string,
     conStance?: string,
     topicBackground?: string
@@ -142,20 +136,17 @@ class ButterflyEffectService {
     if (npcResult.rows.length === 0) return;
 
     const npc = npcResult.rows[0];
+    const replyTo = role === 'enemy'
+      ? `用户刚说了：${triggerContent}，你需要从${stance === 'pro' ? '正' : '反'}方立场犀利反驳`
+      : `用户刚说了：${triggerContent}，你需要肯定并补充观点`;
 
     const content = await aiService.generateNPCResponse({
       npcPrompt: npc.system_prompt,
       npcName: npc.name,
-      topicTitle,
-      stance,
-      proStance,
-      conStance,
-      topicBackground,
-      recentComments,
-      replyTo: `用户刚说了：${triggerContent}，你需要从${stance === 'pro' ? '正' : '反'}方立场犀利反驳`,
+      topicTitle, stance, proStance, conStance, topicBackground,
+      recentComments, replyTo,
     });
 
-    // 存入数据库
     const commentId = uuidv4();
     await db.query(
       `INSERT INTO comments (comment_id, topic_id, author_type, author_id, author_name, content, stance, is_ai_generated)
@@ -163,127 +154,45 @@ class ButterflyEffectService {
       [commentId, topicId, 'npc', npc.npc_id, npc.name, content, stance, true]
     );
 
-    // 通过WebSocket推送
     io.to(`battle:${topicId}`).emit('new_comment', {
       comment_id: commentId,
       author_type: 'npc',
       author_id: npc.npc_id,
       author_name: npc.name,
-      content,
-      stance,
+      content, stance,
       created_at: new Date().toISOString(),
     });
 
-    console.log(`⚔️  Enemy response: ${npc.name} (${stance})`);
+    const icon = role === 'enemy' ? '⚔️' : '🤝';
+    console.log(`${icon}  ${role} response: ${npc.name} (${stance})`);
   }
 
-  private async generateAllyResponse(
-    topicId: string,
-    topicTitle: string,
-    stance: 'pro' | 'con',
-    recentComments: any[],
-    triggerContent: string,
-    proStance?: string,
-    conStance?: string,
-    topicBackground?: string
-  ) {
-    const npcResult = await db.query(
-      `SELECT npc_id, name, system_prompt FROM npcs ORDER BY RANDOM() LIMIT 1`
-    );
+  private async runJudgement(topicId: string, topicTitle: string) {
+    const [proResult, conResult] = await Promise.all([
+      db.query(
+        `SELECT content, author_type, author_name FROM comments 
+         WHERE topic_id = $1 AND stance = 'pro' ORDER BY created_at DESC LIMIT 10`,
+        [topicId]
+      ),
+      db.query(
+        `SELECT content, author_type, author_name FROM comments 
+         WHERE topic_id = $1 AND stance = 'con' ORDER BY created_at DESC LIMIT 10`,
+        [topicId]
+      ),
+    ]);
 
-    if (npcResult.rows.length === 0) return;
-
-    const npc = npcResult.rows[0];
-
-    const content = await aiService.generateNPCResponse({
-      npcPrompt: npc.system_prompt,
-      npcName: npc.name,
-      topicTitle,
-      stance,
-      proStance,
-      conStance,
-      topicBackground,
-      recentComments,
-      replyTo: `用户刚说了：${triggerContent}，你需要肯定并补充观点`,
+    await performJudgement({
+      topicId, topicTitle,
+      proComments: proResult.rows,
+      conComments: conResult.rows,
+      broadcast: (judgeResult) => {
+        io.to(`battle:${topicId}`).emit('battle_update', {
+          pro_score: judgeResult.pro_score,
+          con_score: judgeResult.con_score,
+          ai_judge_result: judgeResult,
+        });
+      },
     });
-
-    // 存入数据库
-    const commentId = uuidv4();
-    await db.query(
-      `INSERT INTO comments (comment_id, topic_id, author_type, author_id, author_name, content, stance, is_ai_generated)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [commentId, topicId, 'npc', npc.npc_id, npc.name, content, stance, true]
-    );
-
-    // 通过WebSocket推送
-    io.to(`battle:${topicId}`).emit('new_comment', {
-      comment_id: commentId,
-      author_type: 'npc',
-      author_id: npc.npc_id,
-      author_name: npc.name,
-      content,
-      stance,
-      created_at: new Date().toISOString(),
-    });
-
-    console.log(`🤝 Ally response: ${npc.name} (${stance})`);
-  }
-
-  private async performJudgement(topicId: string, topicTitle: string) {
-    const proCommentsResult = await db.query(
-      `SELECT content, author_type, author_name FROM comments 
-       WHERE topic_id = $1 AND stance = 'pro' 
-       ORDER BY created_at DESC 
-       LIMIT 10`,
-      [topicId]
-    );
-
-    const conCommentsResult = await db.query(
-      `SELECT content, author_type, author_name FROM comments 
-       WHERE topic_id = $1 AND stance = 'con' 
-       ORDER BY created_at DESC 
-       LIMIT 10`,
-      [topicId]
-    );
-
-    const proComments = proCommentsResult.rows;
-    const conComments = conCommentsResult.rows;
-
-    const judgement = await aiService.judgeDebate({
-      topicTitle,
-      proComments,
-      conComments,
-    });
-
-    const judgeResult = {
-      pro_score: judgement.pro_score,
-      con_score: judgement.con_score,
-      affirmative_summary: judgement.affirmative_summary,
-      negative_summary: judgement.negative_summary,
-      human_insight: judgement.human_insight,
-      current_winner: judgement.current_winner,
-      verdict_reason: judgement.verdict_reason,
-    };
-
-    await redisClient.updateBattleScore(topicId, {
-      pro_count: judgement.pro_score,
-      con_count: judgement.con_score,
-      ai_judge_result: judgeResult,
-    });
-
-    await db.query(
-      `INSERT INTO battle_states (topic_id, pro_score, con_score, judge_report)
-       VALUES ($1, $2, $3, $4)`,
-      [topicId, judgement.pro_score, judgement.con_score, judgement.verdict_reason]
-    );
-
-    io.to(`battle:${topicId}`).emit('battle_update', {
-      pro_score: judgement.pro_score,
-      con_score: judgement.con_score,
-      ai_judge_result: judgeResult,
-    });
-
-    console.log(`⚖️  Judgement: Pro ${judgement.pro_score} - Con ${judgement.con_score}`);
   }
 
   private sleep(ms: number): Promise<void> {

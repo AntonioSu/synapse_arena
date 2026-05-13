@@ -62,7 +62,13 @@ export class ZhihuAPI {
       headers,
     });
 
-    const data = await response.json();
+    const text = await response.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`Zhihu API returned non-JSON (HTTP ${response.status}): ${text.substring(0, 100)}`);
+    }
     
     if (data.status !== 0 && data.code !== 0) {
       throw new Error(`Zhihu API Error: ${data.msg || data.message}`);
@@ -71,18 +77,21 @@ export class ZhihuAPI {
     return data as T;
   }
 
+  // 获取知乎热榜列表
   async getBillboard(topCnt = 50, publishInHours = 48): Promise<BillboardResponse> {
     return this.fetch<BillboardResponse>(
       `/openapi/billboard/list?top_cnt=${topCnt}&publish_in_hours=${publishInHours}`
     );
   }
 
+  // 获取知乎圈子详情
   async getRingDetail(ringId: string, pageNum = 1, pageSize = 20) {
     return this.fetch(
       `/openapi/ring/detail?ring_id=${ringId}&page_num=${pageNum}&page_size=${pageSize}`
     );
   }
 
+  // 发布知乎想法
   async publishPin(data: PublishPinRequest) {
     return this.fetch('/openapi/publish/pin', {
       method: 'POST',
@@ -93,6 +102,7 @@ export class ZhihuAPI {
     });
   }
 
+  // 创建知乎评论
   async createComment(data: CommentRequest) {
     return this.fetch('/openapi/comment/create', {
       method: 'POST',
@@ -103,6 +113,7 @@ export class ZhihuAPI {
     });
   }
 
+  // 删除知乎评论
   async deleteComment(commentId: string) {
     return this.fetch('/openapi/comment/delete', {
       method: 'POST',
@@ -113,6 +124,7 @@ export class ZhihuAPI {
     });
   }
 
+  // 获取知乎评论列表
   async getCommentList(
     contentToken: string,
     contentType: 'pin' | 'comment',
@@ -124,6 +136,7 @@ export class ZhihuAPI {
     );
   }
 
+  // 知乎点赞
   async reaction(data: ReactionRequest) {
     return this.fetch('/openapi/reaction', {
       method: 'POST',
@@ -134,6 +147,7 @@ export class ZhihuAPI {
     });
   }
 
+  // 全网可信搜索
   async globalSearch(query: string, count = 10) {
     const encodedQuery = encodeURIComponent(query);
     return this.fetch(
