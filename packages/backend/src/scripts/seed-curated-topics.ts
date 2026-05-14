@@ -943,22 +943,7 @@ async function main() {
       if (newTopicId) {
         // 与 topic-crawler 保持一致：新话题落库后初始化一份 Redis 战况，
         // 否则前端首次进入会拿不到 battle_state，需要等 auto-maintenance 才能生成。
-        await redisClient.setBattleState(newTopicId, {
-          pro_count: 0,
-          con_count: 0,
-          pro_votes: 0,
-          con_votes: 0,
-          human_participants: 0,
-          ai_judge_result: {
-            pro_score: 50,
-            con_score: 50,
-            affirmative_summary: '',
-            negative_summary: '',
-            human_insight: null,
-            current_winner: 'TIE',
-            verdict_reason: '战斗尚未开始',
-          },
-        });
+        await redisClient.initBattleState(newTopicId);
       }
 
       inserted++;

@@ -3,6 +3,7 @@ import { redisClient } from './redis-client';
 import { db } from '../db/client';
 import { aiService } from './llm-service';
 import { performJudgement } from './judgement-service';
+import { fetchProConRecent } from './comments-repo';
 import { v4 as uuidv4 } from 'uuid';
 import { io } from '../index';
 
@@ -192,23 +193,11 @@ class ButterflyEffectService {
   }
 
   private async runJudgement(topicId: string, topicTitle: string) {
-    const [proResult, conResult] = await Promise.all([
-      db.query(
-        `SELECT content, author_type, author_name FROM comments 
-         WHERE topic_id = $1 AND stance = 'pro' ORDER BY created_at DESC LIMIT 10`,
-        [topicId]
-      ),
-      db.query(
-        `SELECT content, author_type, author_name FROM comments 
-         WHERE topic_id = $1 AND stance = 'con' ORDER BY created_at DESC LIMIT 10`,
-        [topicId]
-      ),
-    ]);
-
+    const { pro, con } = await fetchProConRecent(topicId, 10);
     await performJudgement({
       topicId, topicTitle,
-      proComments: proResult.rows,
-      conComments: conResult.rows,
+      proComments: pro,
+      conComments: con,
       broadcast: (judgeResult) => {
         io.to(`battle:${topicId}`).emit('battle_update', {
           pro_score: judgeResult.pro_score,

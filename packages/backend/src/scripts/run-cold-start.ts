@@ -30,23 +30,7 @@ async function main() {
       }
 
       await coldStartService.generateColdStartBattle(topic.topic_id, rounds);
-
-      await redisClient.setBattleState(topic.topic_id, {
-        pro_count: 0,
-        con_count: 0,
-        pro_votes: 0,
-        con_votes: 0,
-        human_participants: 0,
-        ai_judge_result: {
-          pro_score: 50,
-          con_score: 50,
-          affirmative_summary: '',
-          negative_summary: '',
-          human_insight: null,
-          current_winner: 'TIE',
-          verdict_reason: '战斗刚刚开始',
-        },
-      });
+      await redisClient.initBattleState(topic.topic_id);
 
       console.log(`✅ Cold start + Redis init done for: ${topic.title}\n`);
     }

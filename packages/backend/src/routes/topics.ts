@@ -1,41 +1,16 @@
 import { Router } from 'express';
 import { db } from '../db/client';
 import { redisClient } from '../services/redis-client';
-import { aiService } from '../services/llm-service';
+import {
+  extractAndSaveFeaturedQuotes,
+  getFeaturedQuotesFromDb,
+} from '../services/quotes-service';
 import { asyncHandler } from '../middleware/async-handler';
 
 const router = Router();
 
-interface FeaturedQuoteRow { content: string; stance: 'pro' | 'con' }
-
 const QUOTE_LOCK_TTL_SECONDS = 180;
-function quoteLockKey(topicId: string) { return `lock:topic:${topicId}:quote-extract`; }
-
-async function getFeaturedQuotesFromDb(topicId: string): Promise<FeaturedQuoteRow[]> {
-  const r = await db.query(
-    `SELECT content, stance FROM topic_quotes
-     WHERE topic_id = $1 AND is_featured = true
-     ORDER BY created_at ASC`,
-    [topicId]
-  );
-  return r.rows.map((row: any) => ({ content: row.content, stance: row.stance }));
-}
-
-async function saveFeaturedQuotesToDb(topicId: string, quotes: FeaturedQuoteRow[]): Promise<void> {
-  if (quotes.length === 0) return;
-  await db.query(`UPDATE topic_quotes SET is_featured = false WHERE topic_id = $1`, [topicId]);
-  const placeholders: string[] = [];
-  const params: any[] = [topicId];
-  quotes.forEach((q, i) => {
-    placeholders.push(`($1, $${i * 2 + 2}, $${i * 2 + 3}, true, 'llm')`);
-    params.push(q.content, q.stance);
-  });
-  await db.query(
-    `INSERT INTO topic_quotes (topic_id, content, stance, is_featured, generated_by)
-     VALUES ${placeholders.join(', ')}`,
-    params
-  );
-}
+const quoteLockKey = (topicId: string) => `lock:topic:${topicId}:quote-extract`;
 
 async function triggerQuoteExtraction(topicId: string): Promise<void> {
   // 跨进程的 SETNX 锁，避免多实例 / HMR 场景下同一话题并发触发昂贵的 LLM extractQuotes。
@@ -66,7 +41,8 @@ async function triggerQuoteExtraction(topicId: string): Promise<void> {
 
     const topic = topicR.rows[0];
     console.log(`🔍 开始提炼金句 topic=${topicId} comments=${commentsR.rows.length}`);
-    const quotes = await aiService.extractQuotes({
+    const quotes = await extractAndSaveFeaturedQuotes({
+      topicId,
       topicTitle: topic.title,
       proStance: topic.pro_stance,
       conStance: topic.con_stance,
@@ -74,8 +50,6 @@ async function triggerQuoteExtraction(topicId: string): Promise<void> {
     });
 
     if (quotes.length > 0) {
-      await saveFeaturedQuotesToDb(topicId, quotes);
-      await redisClient.setFeaturedQuotes(topicId, quotes, 600);
       console.log(`✅ 金句已入库 topic=${topicId} count=${quotes.length}`);
     } else {
       console.warn(`⚠️  LLM 未返回有效金句 topic=${topicId}`);
@@ -87,7 +61,8 @@ async function triggerQuoteExtraction(topicId: string): Promise<void> {
   }
 }
 
-const DEFAULT_BATTLE_STATE = {
+// 列表/详情接口在缓存缺失时给前端的最小 battle_state（不含 ai_judge_result，由调用处按需补）。
+const EMPTY_BATTLE_STATE = {
   pro_count: 0,
   con_count: 0,
   pro_votes: 0,
@@ -184,7 +159,7 @@ router.get('/', asyncHandler(async (req, res) => {
       }
 
       const battleState = {
-        ...DEFAULT_BATTLE_STATE,
+        ...EMPTY_BATTLE_STATE,
         pro_votes: cached?.pro_votes || 0,
         con_votes: cached?.con_votes || 0,
         human_participants: cached?.human_participants || 0,
@@ -217,7 +192,7 @@ router.get('/:topicId', asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, error: 'Topic not found' });
   }
 
-  const battleState = (await redisClient.getBattleState(topicId)) || { ...DEFAULT_BATTLE_STATE };
+  const battleState = (await redisClient.getBattleState(topicId)) || { ...EMPTY_BATTLE_STATE };
   res.json({ success: true, data: { ...result.rows[0], battle_state: battleState } });
 }));
 

@@ -207,19 +207,21 @@ const result = await aiService.judgeDebate({
 
 | 脚本 | 用途 |
 | --- | --- |
-| `test-topic-crawler.ts` | 手动跑一次话题爬虫做联调 |
+| `seed-curated-topics.ts` | 注入精选辩题（真实知乎链接 + 细分分类） |
+| `seed-debates-worker.ts` | 并发安全 worker：领取无对话话题并刷出 NPC 辩论种子 |
+| `seed-featured-quotes.ts` | 批量提炼弹幕金句并入库 |
 | `run-cold-start.ts` | 对存量话题批量补冷启动 |
-| `seed-curated-topics.ts` | 注入精选辩题（带真实知乎链接 & 细分分类） |
-| `seed-debates.ts` / `seed-ai-human-debate.ts` | 注入辩论种子数据 |
+| `run-auto-maintenance.ts` | 手动跑一次 auto-maintenance（补对话/裁决/金句） |
+| `judge-missing-topics.ts` | 给缺裁决的话题批量补刷（`--force` 重刷全部） |
+| `rejudge-deadlock-topics.ts` | 重刷所有可能渲染为 DEADLOCK 的话题 |
 | `check-topics-status.ts` | 统计活跃话题中有/无对话的数量 |
-| `fix-zhihu-links.ts` | 修复历史话题缺失的知乎链接 |
-| `fix-battle-state.ts` / `fix-all-battle-states.ts` | 回填 / 修复战况状态 |
 
 执行示例：
 ```bash
 cd packages/backend
 npx tsx src/scripts/check-topics-status.ts
 npx tsx src/scripts/seed-curated-topics.ts
+WORKER_ID=w1 npx tsx src/scripts/seed-debates-worker.ts
 ```
 
 ## 🎨 前端组件
@@ -232,7 +234,7 @@ npx tsx src/scripts/seed-curated-topics.ts
 - `CommentInput` — 选立场 → 发送评论
 - `BattleProgress` — 战况进度条 + 结构化播报（优先使用 AI 裁决分数）
 - `CategoryTabs` — 话题分类 Tab（含计数 badge）
-- `SystemStats` — 系统指标
+- `BarrageBoard` — 话题卡片上的弹幕浮层（金句优先 / 评论降级）
 - `LoginButton` — 知乎 OAuth 登录入口
 
 ### 自定义样式类

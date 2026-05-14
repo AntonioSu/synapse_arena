@@ -24,7 +24,10 @@ class Database {
     try {
       const res = await this.pool.query<T>(text, params);
       const duration = Date.now() - start;
-      console.log('Executed query', { text, duration, rows: res.rowCount });
+      // 默认仅记录慢查询，避免每条 SELECT 都刷屏；DEBUG_DB=1 时回退到全量日志便于排障。
+      if (process.env.DEBUG_DB === '1' || duration > 500) {
+        console.log('Executed query', { text, duration, rows: res.rowCount });
+      }
       return res;
     } catch (error) {
       console.error('Database query error:', { text, error });

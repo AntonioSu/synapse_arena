@@ -17,44 +17,49 @@ const createCommentSchema = z.object({
   username: z.string().optional(),
 });
 
+async function resolveCommentAuthor(
+  authHeader: string,
+  data: { user_id: string; username?: string }
+): Promise<
+  | { ok: true; user: { user_id: string; username: string } }
+  | { ok: false; status: number; error: string }
+> {
+  // 可选 Bearer token：带 token 必查到用户；不带 token 只允许 user_id === 'anonymous'，
+  // 避免匿名通道被滥用伪造任意 user_id。
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+  if (!token) {
+    if (data.user_id !== 'anonymous') {
+      return { ok: false, status: 401, error: 'Authentication required for non-anonymous comment' };
+    }
+    return { ok: true, user: { user_id: 'anonymous', username: data.username || '匿名观众' } };
+  }
+
+  const r = await db.query<{ user_id: string; username: string | null }>(
+    `SELECT user_id, username FROM users WHERE access_token = $1 LIMIT 1`,
+    [token]
+  );
+  if (r.rows.length === 0) {
+    return { ok: false, status: 401, error: 'Invalid access token' };
+  }
+  const row = r.rows[0];
+  if (data.user_id !== 'anonymous' && data.user_id !== row.user_id) {
+    return { ok: false, status: 403, error: 'user_id does not match token' };
+  }
+  return {
+    ok: true,
+    user: { user_id: row.user_id, username: row.username || data.username || '知乎用户' },
+  };
+}
+
 router.post('/', asyncHandler(async (req, res) => {
   const data = createCommentSchema.parse(req.body);
 
-  // 可选 Bearer token：带 token 时一定要查出对应用户；
-  // 不带 token 时只允许 user_id === 'anonymous'，避免匿名通道被滥用伪造任意 user_id。
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-  let user: { user_id: string; username: string };
-
-  if (token) {
-    const r = await db.query<{ user_id: string; username: string | null }>(
-      `SELECT user_id, username FROM users WHERE access_token = $1 LIMIT 1`,
-      [token]
-    );
-    if (r.rows.length === 0) {
-      return res.status(401).json({ success: false, error: 'Invalid access token' });
-    }
-    const row = r.rows[0];
-    if (data.user_id !== 'anonymous' && data.user_id !== row.user_id) {
-      return res.status(403).json({ success: false, error: 'user_id does not match token' });
-    }
-    user = {
-      user_id: row.user_id,
-      username: row.username || data.username || '知乎用户',
-    };
-  } else {
-    if (data.user_id !== 'anonymous') {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required for non-anonymous comment',
-      });
-    }
-    user = {
-      user_id: 'anonymous',
-      username: data.username || '匿名观众',
-    };
+  const auth = await resolveCommentAuthor(req.headers.authorization || '', data);
+  if (!auth.ok) {
+    return res.status(auth.status).json({ success: false, error: auth.error });
   }
+  const { user } = auth;
 
   const commentId = uuidv4();
 
