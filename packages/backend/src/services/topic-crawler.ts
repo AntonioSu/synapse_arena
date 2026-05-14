@@ -5,6 +5,7 @@ import { db } from '../db/client';
 import { redisClient } from './redis-client';
 import { coldStartService } from './cold-start';
 import { v4 as uuidv4 } from 'uuid';
+import { normalizeZhihuQuestionLink } from '../utils/zhihu-link';
 
 class TopicCrawlerService {
   private static readonly SEARCH_QUERIES = [
@@ -62,14 +63,15 @@ class TopicCrawlerService {
       console.log('🤖 AI selecting controversial topics and generating debate stances...');
       const selectedTopics = await aiService.selectControversialTopics(hotTopics);
 
-      // 把原始话题的 zhihu_link 匹配到 AI 生成的辩题上
+      // 把原始话题的 zhihu_link 匹配到 AI 生成的辩题上，且只接受真实 question 链接
       for (const topic of selectedTopics) {
         const match = hotTopics.find(
           h => h.zhihu_link && (h.title.includes(topic.title) || topic.title.includes(h.title) ||
             this.extractKeywords(topic.title).some(kw => h.title.includes(kw)))
         );
-        if (match?.zhihu_link) {
-          (topic as any).zhihu_link = match.zhihu_link;
+        const normalized = normalizeZhihuQuestionLink(match?.zhihu_link);
+        if (normalized) {
+          (topic as any).zhihu_link = normalized;
         }
       }
 
@@ -119,8 +121,14 @@ class TopicCrawlerService {
         const validCategories = ['hot', 'controversial', 'tech', 'social', 'life', 'explosive', 'science', 'humanities', 'work', 'psychology', 'emotion', 'other'];
         const category = topic.category && validCategories.includes(topic.category) ? topic.category : 'hot';
 
+        // 入库前必须有真实的 zhihu /question/{id} 链接，否则跳过（落地体验差）
+        const zhihuLink = normalizeZhihuQuestionLink((topic as any).zhihu_link);
+        if (!zhihuLink) {
+          console.log(`⏭️  Skipping (no zhihu /question/ link): ${topic.title}`);
+          continue;
+        }
+
         const topicId = uuidv4();
-        const zhihuLink = (topic as any).zhihu_link || `https://www.zhihu.com/search?type=content&q=${encodeURIComponent(topic.title)}`;
         await db.query(
           `INSERT INTO topics (topic_id, title, pro_stance, con_stance, heat_score, category, zhihu_link, status)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
