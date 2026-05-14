@@ -1,5 +1,6 @@
 import { db } from '../db/client';
 import { isZhihuQuestionLink, normalizeZhihuQuestionLink } from '../utils/zhihu-link';
+import { redisClient } from '../services/redis-client';
 
 interface CuratedTopic {
   title: string;
@@ -933,11 +934,32 @@ async function main() {
         continue;
       }
 
-      await db.query(
+      const insertResult = await db.query<{ topic_id: string }>(
         `INSERT INTO topics (title, pro_stance, con_stance, background, heat_score, category, zhihu_link, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'active') RETURNING topic_id`,
         [topic.title, topic.pro_stance, topic.con_stance, topic.background, topic.heat_score, topic.category, normalizedLink]
       );
+      const newTopicId = insertResult.rows[0]?.topic_id;
+      if (newTopicId) {
+        // 与 topic-crawler 保持一致：新话题落库后初始化一份 Redis 战况，
+        // 否则前端首次进入会拿不到 battle_state，需要等 auto-maintenance 才能生成。
+        await redisClient.setBattleState(newTopicId, {
+          pro_count: 0,
+          con_count: 0,
+          pro_votes: 0,
+          con_votes: 0,
+          human_participants: 0,
+          ai_judge_result: {
+            pro_score: 50,
+            con_score: 50,
+            affirmative_summary: '',
+            negative_summary: '',
+            human_insight: null,
+            current_winner: 'TIE',
+            verdict_reason: '战斗尚未开始',
+          },
+        });
+      }
 
       inserted++;
       console.log(`✅ Inserted: ${topic.title}`);
@@ -951,9 +973,13 @@ async function main() {
       console.log(`  [${t.category}] ${t.title}`);
     }
 
+    await redisClient.close().catch(() => {});
+    await db.close().catch(() => {});
     process.exit(0);
   } catch (error) {
     console.error('❌ Failed:', error);
+    await redisClient.close().catch(() => {});
+    await db.close().catch(() => {});
     process.exit(1);
   }
 }

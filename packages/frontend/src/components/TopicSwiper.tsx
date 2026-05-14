@@ -28,7 +28,8 @@ export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Pro
         effect="fade"
         fadeEffect={{ crossFade: true }}
         onSlideChange={(swiper) => {
-          onTopicChange(topics[swiper.activeIndex]);
+          const next = topics[swiper.activeIndex];
+          if (next) onTopicChange(next);
         }}
         className="topic-swiper"
       >

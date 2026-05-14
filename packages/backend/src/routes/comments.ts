@@ -20,32 +20,40 @@ const createCommentSchema = z.object({
 router.post('/', asyncHandler(async (req, res) => {
   const data = createCommentSchema.parse(req.body);
 
+  // 可选 Bearer token：带 token 时一定要查出对应用户；
+  // 不带 token 时只允许 user_id === 'anonymous'，避免匿名通道被滥用伪造任意 user_id。
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
   let user: { user_id: string; username: string };
-  
-  if (data.user_id === 'anonymous') {
+
+  if (token) {
+    const r = await db.query<{ user_id: string; username: string | null }>(
+      `SELECT user_id, username FROM users WHERE access_token = $1 LIMIT 1`,
+      [token]
+    );
+    if (r.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid access token' });
+    }
+    const row = r.rows[0];
+    if (data.user_id !== 'anonymous' && data.user_id !== row.user_id) {
+      return res.status(403).json({ success: false, error: 'user_id does not match token' });
+    }
+    user = {
+      user_id: row.user_id,
+      username: row.username || data.username || '知乎用户',
+    };
+  } else {
+    if (data.user_id !== 'anonymous') {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required for non-anonymous comment',
+      });
+    }
     user = {
       user_id: 'anonymous',
       username: data.username || '匿名观众',
     };
-  } else {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    let found = false;
-    if (uuidRegex.test(data.user_id)) {
-      const userResult = await db.query(
-        `SELECT user_id, username FROM users WHERE user_id = $1`,
-        [data.user_id]
-      );
-      if (userResult.rows.length > 0) {
-        found = true;
-        user = userResult.rows[0];
-      }
-    }
-    if (!found) {
-      user = {
-        user_id: data.user_id,
-        username: data.username || '知乎用户',
-      };
-    }
   }
 
   const commentId = uuidv4();

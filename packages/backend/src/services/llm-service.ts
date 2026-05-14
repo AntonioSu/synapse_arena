@@ -285,7 +285,8 @@ ${transcript}
         }))
         .filter((q: any) => {
           if (!q.content || !q.stance) return false;
-          if (q.content.length > 30 || q.content.length < 4) return false;
+          // prompt 要求 ≤22 汉字；本地用 length 是字符近似，给到 24 留点 buffer。
+          if (q.content.length > 24 || q.content.length < 4) return false;
           if (seen.has(q.content)) return false;
           seen.add(q.content);
           return true;
@@ -318,12 +319,18 @@ ${transcript}
 5. 总共最多生成 5 个辩题
 6. 如果多个原始话题属于同一主题领域（如都是关于同一产品/事件），视为同一话题，合计最多 2 个辩题
 7. 生成的辩题之间角度差异要大，避免"续航是否够好"和"续航是否值得高价"这类高度重叠的辩题
-8. 每个辩题必须标注分类 category，从以下选项中选择：
+8. 每个辩题必须标注分类 category，从以下选项中选择（必须严格使用英文 key）：
    - "hot"（热点时事）
    - "controversial"（争议观点）
    - "tech"（科技数码）
+   - "science"（科学研究）
+   - "humanities"（人文/哲学/艺术）
    - "social"（社会民生）
+   - "work"（职场打工）
+   - "psychology"（心理认知）
+   - "emotion"（情感关系）
    - "life"（生活方式）
+   - "other"（其他）
    - "explosive"（炸裂辩题 - 特别具有冲击力、容易引发激烈讨论的话题）
 
 话题列表：
@@ -336,7 +343,7 @@ ${topicsText}
       "title": "精简后的辩题（30字内）",
       "pro_stance": "正方立场（一句话）",
       "con_stance": "反方立场（一句话）",
-      "category": "分类（hot/controversial/tech/social/life）"
+      "category": "上述 12 个分类之一"
     }
   ]
 }

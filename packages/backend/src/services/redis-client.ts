@@ -81,6 +81,19 @@ class RedisClient {
     await this.client.set(key, JSON.stringify(topics), 'EX', ttl);
   }
 
+  /**
+   * 跨进程互斥锁（SETNX + EX）。返回 true 代表抢到锁，false 代表已被占用。
+   * 调用方需要在结束后用 releaseLock 主动释放，或等待 ttl 到期自然释放。
+   */
+  async acquireLock(key: string, ttlSeconds = 120): Promise<boolean> {
+    const res = await this.client.set(key, '1', 'EX', ttlSeconds, 'NX');
+    return res === 'OK';
+  }
+
+  async releaseLock(key: string): Promise<void> {
+    await this.client.del(key);
+  }
+
   async close() {
     await this.client.quit();
   }

@@ -31,9 +31,18 @@ export async function performJudgement(opts: JudgementOptions) {
     verdict_reason: judgement.verdict_reason,
   };
 
+  // 注意：pro_count / con_count 是「评论条数」，不是 LLM 评分。
+  // 这里要回填的是真实评论数，避免把 0-100 评分覆盖到 count 字段。
+  const countsRes = await db.query<{ stance: string; cnt: string }>(
+    `SELECT stance, COUNT(*)::int AS cnt FROM comments WHERE topic_id = $1 GROUP BY stance`,
+    [topicId]
+  );
+  const counts: Record<string, number> = {};
+  for (const row of countsRes.rows) counts[row.stance] = Number(row.cnt);
+
   await redisClient.updateBattleScore(topicId, {
-    pro_count: judgement.pro_score,
-    con_count: judgement.con_score,
+    pro_count: counts.pro || 0,
+    con_count: counts.con || 0,
     ai_judge_result: judgeResult,
   });
 

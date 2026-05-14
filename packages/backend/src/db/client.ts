@@ -13,8 +13,9 @@ class Database {
     });
 
     this.pool.on('error', (err) => {
-      console.error('Unexpected error on idle client', err);
-      process.exit(-1);
+      // 不要在 pool 抛错时 process.exit，让 pg pool 内部按照 retry/重连策略自愈，
+      // 否则任何一次网络抖动都会拖垮整个后端进程。
+      console.error('Unexpected error on idle PG client:', err);
     });
   }
 

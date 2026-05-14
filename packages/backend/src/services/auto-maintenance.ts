@@ -283,8 +283,9 @@ class AutoMaintenanceService {
              WHERE tq.topic_id = t.topic_id AND tq.is_featured = true
           )
         GROUP BY t.topic_id, t.title, t.pro_stance, t.con_stance
-       HAVING COUNT(c.comment_id) >= ${QUOTE_MIN_COMMENTS}
-        ORDER BY cnt DESC`
+       HAVING COUNT(c.comment_id) >= $1
+        ORDER BY cnt DESC`,
+      [QUOTE_MIN_COMMENTS]
     );
     const topics = r.rows;
     if (topics.length === 0) {

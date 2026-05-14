@@ -6,9 +6,10 @@ import { asyncHandler } from '../middleware/async-handler';
 
 const router = Router();
 
-const ongoingExtractions = new Set<string>();
-
 interface FeaturedQuoteRow { content: string; stance: 'pro' | 'con' }
+
+const QUOTE_LOCK_TTL_SECONDS = 180;
+function quoteLockKey(topicId: string) { return `lock:topic:${topicId}:quote-extract`; }
 
 async function getFeaturedQuotesFromDb(topicId: string): Promise<FeaturedQuoteRow[]> {
   const r = await db.query(
@@ -37,8 +38,13 @@ async function saveFeaturedQuotesToDb(topicId: string, quotes: FeaturedQuoteRow[
 }
 
 async function triggerQuoteExtraction(topicId: string): Promise<void> {
-  if (ongoingExtractions.has(topicId)) return;
-  ongoingExtractions.add(topicId);
+  // 跨进程的 SETNX 锁，避免多实例 / HMR 场景下同一话题并发触发昂贵的 LLM extractQuotes。
+  const lockKey = quoteLockKey(topicId);
+  const acquired = await redisClient.acquireLock(lockKey, QUOTE_LOCK_TTL_SECONDS);
+  if (!acquired) {
+    console.log(`⏳ Topic ${topicId} 金句提炼已在进行，跳过本次触发`);
+    return;
+  }
   try {
     const [topicR, commentsR] = await Promise.all([
       db.query(
@@ -77,9 +83,17 @@ async function triggerQuoteExtraction(topicId: string): Promise<void> {
   } catch (err) {
     console.error(`❌ 金句提炼失败 topic=${topicId}:`, err);
   } finally {
-    ongoingExtractions.delete(topicId);
+    await redisClient.releaseLock(lockKey).catch(() => {});
   }
 }
+
+const DEFAULT_BATTLE_STATE = {
+  pro_count: 0,
+  con_count: 0,
+  pro_votes: 0,
+  con_votes: 0,
+  human_participants: 0,
+} as const;
 
 router.get('/categories', asyncHandler(async (req, res) => {
   const result = await db.query(
@@ -107,64 +121,84 @@ router.get('/', asyncHandler(async (req, res) => {
     params
   );
 
+  const topicIds: string[] = result.rows.map((t: any) => t.topic_id);
+
+  // 一次性拿 Redis 战况 + 一次性拿评论计数 / 最新裁决，避免 N+1 查询。
+  const cachedStates = await Promise.all(topicIds.map((id) => redisClient.getBattleState(id)));
+  const cachedMap = new Map<string, any>();
+  topicIds.forEach((id, i) => cachedMap.set(id, cachedStates[i]));
+
+  let countsByTopic = new Map<string, { pro: number; con: number }>();
+  let latestJudgeByTopic = new Map<string, { pro_score: number; con_score: number; judge_report: string | null }>();
+
+  if (topicIds.length > 0) {
+    const [countsRes, judgeRes] = await Promise.all([
+      db.query<{ topic_id: string; stance: string; cnt: string }>(
+        `SELECT topic_id, stance, COUNT(*)::int AS cnt FROM comments
+          WHERE topic_id = ANY($1::uuid[]) GROUP BY topic_id, stance`,
+        [topicIds]
+      ),
+      db.query<{ topic_id: string; pro_score: number; con_score: number; judge_report: string | null }>(
+        `SELECT DISTINCT ON (topic_id) topic_id, pro_score, con_score, judge_report
+           FROM battle_states
+          WHERE topic_id = ANY($1::uuid[])
+          ORDER BY topic_id, snapshot_at DESC`,
+        [topicIds]
+      ),
+    ]);
+    for (const row of countsRes.rows) {
+      const cur = countsByTopic.get(row.topic_id) || { pro: 0, con: 0 };
+      if (row.stance === 'pro') cur.pro = Number(row.cnt);
+      else if (row.stance === 'con') cur.con = Number(row.cnt);
+      countsByTopic.set(row.topic_id, cur);
+    }
+    for (const row of judgeRes.rows) {
+      latestJudgeByTopic.set(row.topic_id, row);
+    }
+  }
+
   const topics = await Promise.all(
     result.rows.map(async (topic: any) => {
-      let battleState = await redisClient.getBattleState(topic.topic_id);
+      const cached = cachedMap.get(topic.topic_id);
+      const counts = countsByTopic.get(topic.topic_id) || { pro: 0, con: 0 };
+      const judge = latestJudgeByTopic.get(topic.topic_id);
 
-      if (!battleState || (battleState.pro_count === 0 && battleState.con_count === 0) || !battleState.ai_judge_result) {
-        const [countsResult, latestJudge] = await Promise.all([
-          db.query(
-            `SELECT stance, COUNT(*) as cnt FROM comments WHERE topic_id = $1 GROUP BY stance`,
-            [topic.topic_id]
-          ),
-          db.query(
-            `SELECT pro_score, con_score, judge_report FROM battle_states
-             WHERE topic_id = $1 ORDER BY snapshot_at DESC LIMIT 1`,
-            [topic.topic_id]
-          ),
-        ]);
-
-        const counts: Record<string, number> = {};
-        for (const row of countsResult.rows) counts[row.stance] = parseInt(row.cnt);
-
-        if ((counts.pro || 0) + (counts.con || 0) > 0) {
-          const judge = latestJudge.rows[0];
-          let aiJudgeResult = battleState?.ai_judge_result;
-          if (!aiJudgeResult && judge?.judge_report) {
-            const proScore = judge.pro_score || 0;
-            const conScore = judge.con_score || 0;
-            // PG 仅存了 pro/con score 与 verdict 文案，未存 current_winner。
-            // 这里只在比分明确分出胜负时回填 current_winner；
-            // 比分相等（含 0-0 默认值）一律不回填，避免缓存过期后凭空生成 'TIE' 徽章。
-            const inferredWinner =
-              proScore > conScore ? 'AFFIRMATIVE'
-              : proScore < conScore ? 'NEGATIVE'
-              : undefined;
-            aiJudgeResult = {
-              pro_score: proScore,
-              con_score: conScore,
-              ...(inferredWinner ? { current_winner: inferredWinner } : {}),
-              verdict_reason: judge.judge_report,
-            };
-          }
-
-          const fallback = {
-            pro_count: counts.pro || 0,
-            con_count: counts.con || 0,
-            pro_votes: battleState?.pro_votes || 0,
-            con_votes: battleState?.con_votes || 0,
-            human_participants: battleState?.human_participants || 0,
-            ai_judge_result: aiJudgeResult,
-          };
-          await redisClient.setBattleState(topic.topic_id, fallback);
-          battleState = fallback;
-        }
+      // 重新构造一份权威 battle_state：
+      //  - count 永远以 comments 表为准；
+      //  - 投票 / 人类参与数沿用缓存值；
+      //  - ai_judge_result 优先用缓存的（带完整 summary），否则从 PG 回填一个最小版本。
+      let aiJudgeResult = cached?.ai_judge_result;
+      if (!aiJudgeResult && judge?.judge_report) {
+        const proScore = judge.pro_score || 0;
+        const conScore = judge.con_score || 0;
+        const inferredWinner =
+          proScore > conScore ? 'AFFIRMATIVE'
+          : proScore < conScore ? 'NEGATIVE'
+          : undefined;
+        aiJudgeResult = {
+          pro_score: proScore,
+          con_score: conScore,
+          ...(inferredWinner ? { current_winner: inferredWinner } : {}),
+          verdict_reason: judge.judge_report,
+        };
       }
 
-      return {
-        ...topic,
-        battle_state: battleState || { pro_count: 0, con_count: 0, pro_votes: 0, con_votes: 0 },
+      const battleState = {
+        ...DEFAULT_BATTLE_STATE,
+        pro_votes: cached?.pro_votes || 0,
+        con_votes: cached?.con_votes || 0,
+        human_participants: cached?.human_participants || 0,
+        pro_count: counts.pro,
+        con_count: counts.con,
+        ai_judge_result: aiJudgeResult,
       };
+
+      // 顺手把权威值写回缓存，让下一次请求直接命中。
+      if (counts.pro + counts.con > 0 || aiJudgeResult) {
+        await redisClient.setBattleState(topic.topic_id, battleState);
+      }
+
+      return { ...topic, battle_state: battleState };
     })
   );
 
@@ -183,7 +217,7 @@ router.get('/:topicId', asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, error: 'Topic not found' });
   }
 
-  const battleState = await redisClient.getBattleState(topicId);
+  const battleState = (await redisClient.getBattleState(topicId)) || { ...DEFAULT_BATTLE_STATE };
   res.json({ success: true, data: { ...result.rows[0], battle_state: battleState } });
 }));
 
