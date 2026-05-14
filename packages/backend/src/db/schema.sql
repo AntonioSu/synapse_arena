@@ -78,6 +78,21 @@ CREATE TABLE IF NOT EXISTS battle_states (
 CREATE INDEX idx_battle_states_topic ON battle_states(topic_id);
 CREATE INDEX idx_battle_states_snapshot ON battle_states(snapshot_at DESC);
 
+-- 精选金句表（用于话题卡片弹幕）
+CREATE TABLE IF NOT EXISTS topic_quotes (
+  quote_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  topic_id UUID REFERENCES topics(topic_id) ON DELETE CASCADE,
+  content VARCHAR(80) NOT NULL,
+  stance VARCHAR(10) NOT NULL,
+  source_comment_id UUID REFERENCES comments(comment_id) ON DELETE SET NULL,
+  is_featured BOOLEAN DEFAULT true,
+  generated_by VARCHAR(20) DEFAULT 'llm',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_topic_quotes_topic ON topic_quotes(topic_id, is_featured);
+CREATE INDEX IF NOT EXISTS idx_topic_quotes_created_at ON topic_quotes(created_at DESC);
+
 -- 用户投票表
 CREATE TABLE IF NOT EXISTS user_votes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

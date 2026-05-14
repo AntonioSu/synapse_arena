@@ -6,6 +6,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-fade';
+import BarrageBoard from './BarrageBoard';
 import type { Topic } from '@/types';
 
 interface Props {
@@ -16,7 +17,8 @@ interface Props {
 
 export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Props) {
   return (
-    <section className="cyber-card p-4 sm:p-6" aria-label="debate topics">
+    <section className="cyber-card p-4 sm:p-6 relative overflow-hidden" aria-label="debate topics">
+      {currentTopic && <BarrageBoard topic={currentTopic} />}
       <Swiper
         modules={[Navigation, Pagination, EffectFade]}
         spaceBetween={30}

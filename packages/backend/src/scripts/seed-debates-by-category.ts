@@ -2,21 +2,35 @@ import { db } from '../db/client';
 import { aiService } from '../services/llm-service';
 import { v4 as uuidv4 } from 'uuid';
 
-async function seedDebates() {
+/**
+ * 并行刷库脚本：优先刷每个分类下 top 2 热度（且尚无对话）的话题。
+ * 与 seed-debates.ts 并发运行；写入前 double-check 已有评论数避免重复。
+ */
+async function seedByCategory() {
+  const ROUNDS = 5;
 
   const topicsResult = await db.query(`
-    SELECT t.topic_id, t.title, t.pro_stance, t.con_stance, t.background
-    FROM topics t
-    WHERE t.status = 'active'
-      AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.topic_id = t.topic_id)
-    ORDER BY t.created_at DESC
+    WITH ranked AS (
+      SELECT t.topic_id, t.title, t.pro_stance, t.con_stance, t.background, t.category, t.heat_score,
+             ROW_NUMBER() OVER (PARTITION BY t.category ORDER BY t.heat_score DESC, t.created_at DESC) AS rn
+      FROM topics t
+      WHERE t.status = 'active'
+        AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.topic_id = t.topic_id)
+    )
+    SELECT topic_id, title, pro_stance, con_stance, background, category, heat_score
+    FROM ranked
+    WHERE rn <= 2
+    ORDER BY heat_score DESC
   `);
 
-  const emptyTopics = topicsResult.rows;
-  console.log(`Found ${emptyTopics.length} topics without debates`);
+  const targetTopics = topicsResult.rows;
+  console.log(`📊 Selected ${targetTopics.length} topics across categories (top 2 per category)`);
+  targetTopics.forEach((t: any) => {
+    console.log(`  [${t.category}] (热度:${t.heat_score}) ${t.title}`);
+  });
 
-  if (emptyTopics.length === 0) {
-    console.log('All topics already have debates!');
+  if (targetTopics.length === 0) {
+    console.log('✅ All categories already covered.');
     process.exit(0);
   }
 
@@ -24,21 +38,29 @@ async function seedDebates() {
   const npcs = npcsResult.rows;
 
   if (npcs.length === 0) {
-    console.error('No NPCs found! Please seed NPCs first.');
+    console.error('❌ No NPCs found! Please seed NPCs first.');
     process.exit(1);
   }
 
-  const ROUNDS = 5;
+  for (const topic of targetTopics) {
+    // double-check：另一路可能已经开始或完成
+    const existing = await db.query(
+      `SELECT COUNT(*)::int AS cnt FROM comments WHERE topic_id = $1`,
+      [topic.topic_id]
+    );
+    if (existing.rows[0].cnt > 0) {
+      console.log(`⏭️  Skip (already has comments): ${topic.title}`);
+      continue;
+    }
 
-  for (const topic of emptyTopics) {
     console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`🎯 ${topic.title}`);
+    console.log(`🎯 [${topic.category}] ${topic.title}`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 
     try {
       for (let round = 0; round < ROUNDS; round++) {
         const recentResult = await db.query(
-          `SELECT author_name, content, stance FROM comments 
+          `SELECT author_name, content, stance FROM comments
            WHERE topic_id = $1 ORDER BY created_at DESC LIMIT 10`,
           [topic.topic_id]
         );
@@ -101,7 +123,7 @@ async function seedDebates() {
     }
   }
 
-  console.log('\n✅ All done!');
+  console.log('\n✅ Category-priority pass done!');
   process.exit(0);
 }
 
@@ -109,7 +131,7 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-seedDebates().catch((err) => {
+seedByCategory().catch((err) => {
   console.error('Fatal error:', err);
   process.exit(1);
 });

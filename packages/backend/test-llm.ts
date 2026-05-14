@@ -1,13 +1,12 @@
-// 测试MiniMax服务
-import { minimaxService } from './src/services/minimax-service';
+// 测试 LLM 服务（OpenAI 兼容，由 .env 中的 LLM_API_URL / LLM_API_KEY / LLM_MODEL 驱动）
+import { aiService } from './src/services/llm-service';
 
-async function testMiniMax() {
-  console.log('🧪 测试MiniMax服务...\n');
+async function testLLM() {
+  console.log('🧪 测试 LLM 服务...\n');
 
   try {
-    // 测试1: NPC生成回应
     console.log('测试1: NPC生成回应');
-    const npcResponse = await minimaxService.generateNPCResponse({
+    const npcResponse = await aiService.generateNPCResponse({
       npcPrompt: '你是一个理性分析派，喜欢用数据说话，口头禅是"数据不会骗人"',
       npcName: '数据至上派',
       topicTitle: '996工作制是否应该被禁止',
@@ -22,9 +21,8 @@ async function testMiniMax() {
     console.log('✅ NPC回应:', npcResponse);
     console.log('');
 
-    // 测试2: 辩论评判
     console.log('测试2: 辩论评判');
-    const judgement = await minimaxService.judgeDebate({
+    const judgement = await aiService.judgeDebate({
       topicTitle: '远程办公是否应该成为常态',
       proComments: [
         { content: '远程办公节省通勤时间，提高效率' },
@@ -38,11 +36,11 @@ async function testMiniMax() {
     console.log('✅ 评判结果:', judgement);
     console.log('');
 
-    console.log('🎉 所有测试通过！MiniMax服务正常工作');
+    console.log('🎉 所有测试通过！LLM 服务正常工作');
   } catch (error) {
     console.error('❌ 测试失败:', error);
     process.exit(1);
   }
 }
 
-testMiniMax();
+testLLM();

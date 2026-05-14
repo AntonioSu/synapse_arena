@@ -7,6 +7,7 @@ import { config } from './config';
 import { db } from './db/client';
 import { redisClient } from './services/redis-client';
 import { topicCrawler } from './services/topic-crawler';
+import { autoMaintenance } from './services/auto-maintenance';
 
 // Routes
 import topicsRouter from './routes/topics';
@@ -85,6 +86,9 @@ const startServer = async () => {
 
     // Start topic crawler cron job
     topicCrawler.startCronJob();
+
+    // Start auto-maintenance cron job (fills missing dialogs / judgements / quotes)
+    autoMaintenance.startCronJob();
 
     // Start HTTP server
     httpServer.listen(config.port, () => {

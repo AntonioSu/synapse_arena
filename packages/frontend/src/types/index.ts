@@ -45,3 +45,8 @@ export interface User {
   avatar_url: string;
   soft_memory: any;
 }
+
+export interface FeaturedQuote {
+  content: string;
+  stance: 'pro' | 'con';
+}
