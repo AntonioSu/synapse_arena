@@ -21,3 +21,5 @@ coverage
 *.css
 *.js
 *.jsx
+logs/*
+local_files/*
