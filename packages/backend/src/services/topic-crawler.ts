@@ -12,7 +12,7 @@ class TopicCrawlerService {
     '怎么看 热搜', '反转 事件', '社会热点 讨论',
   ];
 
-  private async fetchHotTopics(): Promise<Array<{ title: string; body: string; heat_score: number }>> {
+  private async fetchHotTopics(): Promise<Array<{ title: string; body: string; heat_score: number; zhihu_link?: string }>> {
     // 优先尝试热榜 API
     try {
       const billboardData = await zhihuAPI.getBillboard(3, 24);
@@ -20,7 +20,12 @@ class TopicCrawlerService {
       if (list.length > 0) {
         console.log(`✅ Fetched ${list.length} topics from billboard`);
         await redisClient.setCachedHotTopics(list, 3600);
-        return list.map((t: any) => ({ title: t.title, body: t.body, heat_score: t.heat_score }));
+        return list.map((t: any) => ({
+          title: t.title,
+          body: t.body,
+          heat_score: t.heat_score,
+          zhihu_link: t.link_url || undefined,
+        }));
       }
     } catch (e: any) {
       console.log(`⚠️  Billboard API unavailable (${e.message}), falling back to search`);
@@ -38,6 +43,7 @@ class TopicCrawlerService {
       title: i.title,
       body: (i.content_text || '').substring(0, 300),
       heat_score: (i.vote_up_count || 0) * 100 + (i.comment_count || 0) * 50,
+      zhihu_link: i.url || undefined,
     }));
   }
 
@@ -55,6 +61,17 @@ class TopicCrawlerService {
       // AI筛选并生成可辩论的话题
       console.log('🤖 AI selecting controversial topics and generating debate stances...');
       const selectedTopics = await aiService.selectControversialTopics(hotTopics);
+
+      // 把原始话题的 zhihu_link 匹配到 AI 生成的辩题上
+      for (const topic of selectedTopics) {
+        const match = hotTopics.find(
+          h => h.zhihu_link && (h.title.includes(topic.title) || topic.title.includes(h.title) ||
+            this.extractKeywords(topic.title).some(kw => h.title.includes(kw)))
+        );
+        if (match?.zhihu_link) {
+          (topic as any).zhihu_link = match.zhihu_link;
+        }
+      }
 
       console.log(`✅ AI selected ${selectedTopics.length} controversial topics`);
 
@@ -99,13 +116,14 @@ class TopicCrawlerService {
         }
         if (tooSimilar) continue;
 
-        const validCategories = ['hot', 'controversial', 'tech', 'social', 'life'];
+        const validCategories = ['hot', 'controversial', 'tech', 'social', 'life', 'explosive', 'science', 'humanities', 'work', 'psychology', 'emotion', 'other'];
         const category = topic.category && validCategories.includes(topic.category) ? topic.category : 'hot';
 
         const topicId = uuidv4();
+        const zhihuLink = (topic as any).zhihu_link || `https://www.zhihu.com/search?type=content&q=${encodeURIComponent(topic.title)}`;
         await db.query(
-          `INSERT INTO topics (topic_id, title, pro_stance, con_stance, heat_score, category, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          `INSERT INTO topics (topic_id, title, pro_stance, con_stance, heat_score, category, zhihu_link, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
           [
             topicId,
             topic.title,
@@ -113,6 +131,7 @@ class TopicCrawlerService {
             topic.con_stance,
             topic.heat_score || 0,
             category,
+            zhihuLink,
             'active',
           ]
         );

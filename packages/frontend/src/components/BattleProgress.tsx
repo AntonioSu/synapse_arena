@@ -13,18 +13,23 @@ function WinnerBadge({ winner }: { winner: string }) {
   }
   const isAffirmative = winner === 'AFFIRMATIVE';
   return (
-    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isAffirmative ? 'bg-red-100 text-red-600' : 'bg-cyan-100 text-cyan-700'}`}>
+    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isAffirmative ? 'bg-cyan-100 text-cyan-700' : 'bg-rose-100 text-rose-600'}`}>
       {isAffirmative ? '\u6b63\u65b9\u9886\u5148' : '\u53cd\u65b9\u9886\u5148'}
     </span>
   );
 }
 
 export default function BattleProgress({ battleState }: Props) {
-  const total = battleState.pro_count + battleState.con_count || 1;
-  const proPercentage = (battleState.pro_count / total) * 100;
-  const conPercentage = (battleState.con_count / total) * 100;
-  const isHumanJudge = (battleState.human_participants || 0) >= 10;
   const judge = battleState.ai_judge_result;
+  const isHumanJudge = (battleState.human_participants || 0) >= 10;
+
+  const hasJudgeScore = judge && (judge.pro_score || judge.con_score);
+  const proPercentage = hasJudgeScore
+    ? judge.pro_score
+    : (battleState.pro_count / (battleState.pro_count + battleState.con_count || 1)) * 100;
+  const conPercentage = hasJudgeScore
+    ? judge.con_score
+    : (battleState.con_count / (battleState.pro_count + battleState.con_count || 1)) * 100;
 
   return (
     <section className="cyber-card p-4 sm:p-6" aria-label="battle status">
@@ -36,13 +41,13 @@ export default function BattleProgress({ battleState }: Props) {
         aria-valuemax={100}
       >
         <motion.div
-          className="absolute left-0 top-0 h-full bg-gradient-to-r from-red-400 to-red-500"
+          className="absolute left-0 top-0 h-full bg-gradient-to-r from-cyan-400 to-cyan-500"
           initial={{ width: 0 }}
           animate={{ width: `${proPercentage}%` }}
           transition={{ duration: 0.8, ease: 'easeOut' }}
         />
         <motion.div
-          className="absolute right-0 top-0 h-full bg-gradient-to-l from-cyan-400 to-cyan-500"
+          className="absolute right-0 top-0 h-full bg-gradient-to-l from-rose-400 to-rose-500"
           initial={{ width: 0 }}
           animate={{ width: `${conPercentage}%` }}
           transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -52,26 +57,26 @@ export default function BattleProgress({ battleState }: Props) {
 
         <div className="absolute inset-0 flex items-center justify-between px-3 sm:px-4">
           <span className="text-sm font-bold text-white drop-shadow">
-            {battleState.pro_count}
+            {hasJudgeScore ? judge.pro_score : battleState.pro_count}
           </span>
           <span className="text-[10px] text-gray-500 font-mono bg-white/70 px-1.5 py-0.5 rounded">VS</span>
           <span className="text-sm font-bold text-white drop-shadow">
-            {battleState.con_count}
+            {hasJudgeScore ? judge.con_score : battleState.con_count}
           </span>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 mt-4 text-xs">
         <div className="text-center">
-          <div className="text-red-500 font-bold mb-0.5">{'\u6b63\u65b9'}</div>
+          <div className="text-cyan-600 font-bold mb-0.5">{'\u6b63\u65b9'}</div>
           <div className="text-gray-500 font-mono">
-            {isHumanJudge ? `${battleState.pro_votes} \u7968` : `${proPercentage.toFixed(1)}%`}
+            {isHumanJudge ? `${battleState.pro_votes} \u7968` : `${proPercentage.toFixed(hasJudgeScore ? 0 : 1)}%`}
           </div>
         </div>
         <div className="text-center">
-          <div className="text-cyan-600 font-bold mb-0.5">{'\u53cd\u65b9'}</div>
+          <div className="text-rose-500 font-bold mb-0.5">{'\u53cd\u65b9'}</div>
           <div className="text-gray-500 font-mono">
-            {isHumanJudge ? `${battleState.con_votes} \u7968` : `${conPercentage.toFixed(1)}%`}
+            {isHumanJudge ? `${battleState.con_votes} \u7968` : `${conPercentage.toFixed(hasJudgeScore ? 0 : 1)}%`}
           </div>
         </div>
       </div>
@@ -94,13 +99,13 @@ export default function BattleProgress({ battleState }: Props) {
             <div className="grid grid-cols-2 gap-3">
               {judge.affirmative_summary && (
                 <div className="text-xs">
-                  <div className="text-red-500 font-bold mb-0.5 text-[10px] font-mono">{'\u6b63\u65b9\u652f\u70b9'}</div>
+                  <div className="text-cyan-600 font-bold mb-0.5 text-[10px] font-mono">{'\u6b63\u65b9\u652f\u70b9'}</div>
                   <p className="text-gray-600 leading-relaxed">{judge.affirmative_summary}</p>
                 </div>
               )}
               {judge.negative_summary && (
                 <div className="text-xs">
-                  <div className="text-cyan-600 font-bold mb-0.5 text-[10px] font-mono">{'\u53cd\u65b9\u652f\u70b9'}</div>
+                  <div className="text-rose-500 font-bold mb-0.5 text-[10px] font-mono">{'\u53cd\u65b9\u652f\u70b9'}</div>
                   <p className="text-gray-600 leading-relaxed">{judge.negative_summary}</p>
                 </div>
               )}

@@ -53,20 +53,20 @@ export default function TopicSwiper({ topics, currentTopic, onTopicChange }: Pro
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                <div className="cyber-card p-4 border-l-2 border-red-400">
-                  <div className="text-xs text-red-500 mb-2 font-mono font-semibold">
-                    {'[ \u6b63\u65b9\u7acb\u573a ]'}
+                <div className="p-4 border-l-2 border-cyan-400 bg-cyan-50/40 rounded-r-sm">
+                  <div className="text-xs text-cyan-600 mb-2 font-mono font-semibold">
+                    {'[ 正方立场 ]'}
                   </div>
                   <p className="text-sm text-gray-700 leading-relaxed">
                     {topic.pro_stance}
                   </p>
                 </div>
 
-                <div className="cyber-card p-4 border-l-2 sm:border-l-0 sm:border-r-2 border-cyan-400">
-                  <div className="text-xs text-cyan-600 mb-2 font-mono font-semibold">
-                    {'[ \u53cd\u65b9\u7acb\u573a ]'}
+                <div className="p-4 border-l-2 sm:border-l-0 sm:border-r-2 border-rose-400 bg-rose-50/40 rounded-l-sm sm:rounded-l-none sm:rounded-r-sm">
+                  <div className="text-xs text-rose-500 mb-2 font-mono font-semibold sm:text-right">
+                    {'[ 反方立场 ]'}
                   </div>
-                  <p className="text-sm text-gray-700 leading-relaxed">
+                  <p className="text-sm text-gray-700 leading-relaxed sm:text-right">
                     {topic.con_stance}
                   </p>
                 </div>

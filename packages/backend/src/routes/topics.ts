@@ -27,7 +27,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
   const result = await db.query(
     `SELECT topic_id, title, pro_stance, con_stance, heat_score, category, zhihu_link, created_at 
-     FROM topics ${whereClause} ORDER BY created_at DESC LIMIT 10`,
+     FROM topics ${whereClause} ORDER BY heat_score DESC, created_at DESC LIMIT 50`,
     params
   );
 

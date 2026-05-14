@@ -31,7 +31,6 @@ export const topicsAPI = {
 
 export const commentsAPI = {
   create: (data: any) => api.post('/comments', data),
-  aiAssist: (data: any) => api.post('/comments/ai-assist', data),
 };
 
 export const authAPI = {

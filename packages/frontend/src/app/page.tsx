@@ -14,7 +14,7 @@ export default function Home() {
   const { topics, setTopics, currentTopic, setCurrentTopic, user, setUser, logout } = useStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState('explosive');
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -42,8 +42,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!user) return;
-    loadTopics('all');
-    loadCategories();
+    loadTopics('explosive');
   }, [user]);
 
   const loadCategories = async () => {
@@ -64,14 +63,24 @@ export default function Home() {
   const loadTopics = useCallback(async (category: string) => {
     try {
       setIsLoading(true);
-      const response = await topicsAPI.getAll(category);
-      if (response.data.success) {
-        setTopics(response.data.data);
-        if (response.data.data.length > 0) {
-          setCurrentTopic(response.data.data[0]);
+      const [topicsRes, catsRes] = await Promise.all([
+        topicsAPI.getAll(category),
+        topicsAPI.getCategories(),
+      ]);
+      if (topicsRes.data.success) {
+        setTopics(topicsRes.data.data);
+        if (topicsRes.data.data.length > 0) {
+          setCurrentTopic(topicsRes.data.data[0]);
         } else {
           setCurrentTopic(null);
         }
+      }
+      if (catsRes.data.success) {
+        const counts: Record<string, number> = {};
+        for (const item of catsRes.data.data.categories) {
+          counts[item.category] = parseInt(item.count);
+        }
+        setCategoryCounts(counts);
       }
     } catch (error) {
       console.error('Failed to load topics:', error);

@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { db } from '../db/client';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { aiService } from '../services/minimax-service';
 import { butterflyEffect } from '../services/butterfly-effect';
 import { io } from '../index';
 import { asyncHandler } from '../middleware/async-handler';
@@ -69,46 +68,14 @@ router.post('/', asyncHandler(async (req, res) => {
 
   io.to(`battle:${data.topic_id}`).emit('new_comment', comment);
 
-  await butterflyEffect.triggerButterflyEffect({
+  res.json({ success: true, data: comment });
+
+  butterflyEffect.triggerButterflyEffect({
     trigger_comment_id: commentId,
     topic_id: data.topic_id,
     user_stance: data.stance,
     rounds: 10,
-  });
-
-  res.json({ success: true, data: comment });
-}));
-
-router.post('/ai-assist', asyncHandler(async (req, res) => {
-  const { topic_id, stance, user_id } = req.body;
-
-  let softMemory = {};
-  
-  if (user_id && user_id !== 'anonymous') {
-    const userResult = await db.query(`SELECT soft_memory FROM users WHERE user_id = $1`, [user_id]);
-    if (userResult.rows.length > 0) {
-      softMemory = userResult.rows[0].soft_memory || {};
-    }
-  }
-
-  const topicResult = await db.query(`SELECT title FROM topics WHERE topic_id = $1`, [topic_id]);
-  if (topicResult.rows.length === 0) {
-    return res.status(404).json({ success: false, error: 'Topic not found' });
-  }
-
-  const commentsResult = await db.query(
-    `SELECT author_name, content FROM comments WHERE topic_id = $1 ORDER BY created_at DESC LIMIT 5`,
-    [topic_id]
-  );
-
-  const content = await aiService.generateUserAIResponse({
-    softMemory,
-    topicTitle: topicResult.rows[0].title,
-    stance,
-    recentComments: commentsResult.rows,
-  });
-
-  res.json({ success: true, data: { content } });
+  }).catch((err) => console.error('Failed to trigger butterfly effect:', err));
 }));
 
 export default router;

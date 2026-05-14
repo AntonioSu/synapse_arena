@@ -3,10 +3,14 @@
 @tailwind utilities;
 
 @layer base {
+  html, body {
+    background: #f0f4f8 !important;
+  }
+
   body {
     @apply font-mono;
-    background: #f0f4f8;
     overflow-x: hidden;
+    color: #1e293b;
   }
 
   body::before {
@@ -17,15 +21,8 @@
     width: 100%;
     height: 100%;
     background:
-      linear-gradient(
-        rgba(0, 180, 220, 0.03) 1px,
-        transparent 1px
-      ),
-      linear-gradient(
-        90deg,
-        rgba(0, 180, 220, 0.03) 1px,
-        transparent 1px
-      );
+      linear-gradient(rgba(0, 180, 220, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 180, 220, 0.03) 1px, transparent 1px);
     background-size: 60px 60px;
     pointer-events: none;
     z-index: 50;
@@ -132,25 +129,27 @@
     box-shadow: -2px 0 6px rgba(0, 200, 120, 0.15);
   }
 
-  .progress-bar {
-    @apply h-2 bg-gradient-to-r relative overflow-hidden;
-  }
-
-  .progress-bar::after {
-    content: '';
-    @apply absolute inset-0;
-    @apply bg-white/30;
-    animation: scan 2s linear infinite;
-  }
-
   .label-tag {
     @apply text-[8px] font-mono tracking-[0.2em] uppercase px-1.5 py-0.5 rounded-sm;
   }
-}
 
-@keyframes scan {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  .chat-arrow-left,
+  .chat-arrow-right {
+    @apply absolute top-[12px] w-0 h-0;
+    border-style: solid;
+  }
+
+  .chat-arrow-left {
+    @apply -left-[6px];
+    border-width: 6px 6px 6px 0;
+    border-color: transparent var(--arrow-color) transparent transparent;
+  }
+
+  .chat-arrow-right {
+    @apply -right-[6px];
+    border-width: 6px 0 6px 6px;
+    border-color: transparent transparent transparent var(--arrow-color);
+  }
 }
 
 @keyframes pulse-glow {
@@ -194,8 +193,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse-glow,
-  .skeleton,
-  .progress-bar::after {
+  .skeleton {
     animation: none;
   }
 }
