@@ -17,12 +17,14 @@ class MiniMaxService {
     model?: string;
     temperature?: number;
     max_tokens?: number;
+    timeout?: number;
+    fallbackMock?: boolean;
   }): Promise<string> {
-    const { messages, model, temperature = 0.9, max_tokens = 512 } = params;
+    const { messages, model, temperature = 0.9, max_tokens = 512, timeout = 60000, fallbackMock = true } = params;
 
     if (!this.apiKey || this.apiKey.length < 10) {
       console.warn('⚠️  LLM API密钥未配置，使用模拟响应');
-      return this.mockResponse(messages);
+      return fallbackMock ? this.mockResponse(messages) : '';
     }
 
     try {
@@ -39,14 +41,14 @@ class MiniMaxService {
             'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json',
           },
-          timeout: 60000,
+          timeout,
         }
       );
 
-      return response.data?.choices?.[0]?.message?.content || '我需要思考一下...';
+      return response.data?.choices?.[0]?.message?.content || (fallbackMock ? '我需要思考一下...' : '');
     } catch (error: any) {
       console.error('LLM API调用失败:', error.response?.data || error.message);
-      return this.mockResponse(messages);
+      return fallbackMock ? this.mockResponse(messages) : '';
     }
   }
 
@@ -217,6 +219,80 @@ ${conSummary}
         current_winner: 'TIE',
         verdict_reason: '系统混沌，无法解析战况',
       };
+    }
+  }
+
+  async extractQuotes(params: {
+    topicTitle: string;
+    proStance?: string;
+    conStance?: string;
+    comments: Array<{ content: string; stance: 'pro' | 'con'; author_name?: string; author_type?: string }>;
+  }): Promise<Array<{ content: string; stance: 'pro' | 'con' }>> {
+    const { topicTitle, proStance, conStance, comments } = params;
+    if (!comments || comments.length < 3) return [];
+
+    const sample = comments
+      .filter((c) => c.content && c.content.length <= 200)
+      .slice(-40);
+    const transcript = sample
+      .map((c) => `[${c.stance === 'pro' ? '正方' : '反方'}] ${c.author_name || '匿名'}: ${c.content}`)
+      .join('\n');
+
+    const prompt = `你是赛博辩论场的「金句提炼师」。请从下面的辩论评论中提炼最具传播力的金句。
+
+辩题：${topicTitle}
+${proStance ? `正方立场：${proStance}` : ''}
+${conStance ? `反方立场：${conStance}` : ''}
+
+评论实录：
+${transcript}
+
+【提炼准则】
+1. 共输出 8-12 条金句，正反方约各占一半
+2. 每条 ≤ 22 个汉字，简洁、锋利、有节奏感，最好读起来像格言或弹幕梗
+3. 可以从原评论中提炼、浓缩或改写，但必须忠于原立场（不得反转 pro/con）
+4. 优先选有锐度、有冲击、能引发共鸣的语句；避免空洞口号、冗长说理、重复观点
+5. 同一观点至多保留 1 条最锋利的版本，不要近义重复
+
+只返回纯 JSON（不要 \`\`\`json 代码块）：
+{
+  "quotes": [
+    {"content": "金句内容（≤22汉字）", "stance": "pro"},
+    {"content": "金句内容（≤22汉字）", "stance": "con"}
+  ]
+}`;
+
+    const content = await this.chatCompletion({
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.85,
+      max_tokens: 1200,
+      timeout: 180000,
+      fallbackMock: false,
+    });
+
+    if (!content) return [];
+
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : content;
+      const parsed = JSON.parse(jsonStr);
+      const list = Array.isArray(parsed?.quotes) ? parsed.quotes : [];
+      const seen = new Set<string>();
+      return list
+        .map((q: any) => ({
+          content: typeof q?.content === 'string' ? q.content.trim() : '',
+          stance: q?.stance === 'pro' || q?.stance === 'con' ? q.stance : null,
+        }))
+        .filter((q: any) => {
+          if (!q.content || !q.stance) return false;
+          if (q.content.length > 30 || q.content.length < 4) return false;
+          if (seen.has(q.content)) return false;
+          seen.add(q.content);
+          return true;
+        });
+    } catch (e) {
+      console.error('解析金句JSON失败, raw:', content);
+      return [];
     }
   }
 

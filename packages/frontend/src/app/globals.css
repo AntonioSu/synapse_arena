@@ -197,3 +197,26 @@
     animation: none;
   }
 }
+
+@keyframes barrage-flow {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(var(--barrage-distance, -100vw) - 100%));
+  }
+}
+
+.barrage-item {
+  animation-name: barrage-flow;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barrage-item {
+    animation: none;
+    opacity: 0;
+  }
+}

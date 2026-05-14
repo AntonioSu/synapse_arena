@@ -24,12 +24,13 @@ export default function BattleProgress({ battleState }: Props) {
   const isHumanJudge = (battleState.human_participants || 0) >= 10;
 
   const hasJudgeScore = judge && (judge.pro_score || judge.con_score);
-  const proPercentage = hasJudgeScore
-    ? judge.pro_score
-    : (battleState.pro_count / (battleState.pro_count + battleState.con_count || 1)) * 100;
-  const conPercentage = hasJudgeScore
-    ? judge.con_score
-    : (battleState.con_count / (battleState.pro_count + battleState.con_count || 1)) * 100;
+  // pro_score / con_score 是 AI 评出的两边各自独立的算力强度（0-100），
+  // 需要归一化后再作为进度条宽度和百分比展示，避免两边相加超过 100%。
+  const proRaw = hasJudgeScore ? judge.pro_score : battleState.pro_count;
+  const conRaw = hasJudgeScore ? judge.con_score : battleState.con_count;
+  const totalRaw = proRaw + conRaw || 1;
+  const proPercentage = (proRaw / totalRaw) * 100;
+  const conPercentage = (conRaw / totalRaw) * 100;
 
   return (
     <section className="cyber-card p-4 sm:p-6" aria-label="battle status">
@@ -55,14 +56,8 @@ export default function BattleProgress({ battleState }: Props) {
 
         <div className="absolute left-1/2 top-0 w-px h-full bg-white/60 -translate-x-1/2" />
 
-        <div className="absolute inset-0 flex items-center justify-between px-3 sm:px-4">
-          <span className="text-sm font-bold text-white drop-shadow">
-            {hasJudgeScore ? judge.pro_score : battleState.pro_count}
-          </span>
+        <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-[10px] text-gray-500 font-mono bg-white/70 px-1.5 py-0.5 rounded">VS</span>
-          <span className="text-sm font-bold text-white drop-shadow">
-            {hasJudgeScore ? judge.con_score : battleState.con_count}
-          </span>
         </div>
       </div>
 

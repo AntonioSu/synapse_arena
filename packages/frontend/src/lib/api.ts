@@ -27,6 +27,7 @@ export const topicsAPI = {
   getComments: (id: string, limit = 100, offset = 0) => 
     api.get(`/topics/${id}/comments`, { params: { limit, offset } }),
   getCategories: () => api.get('/topics/categories'),
+  getQuotes: (id: string) => api.get(`/topics/${id}/quotes`),
 };
 
 export const commentsAPI = {

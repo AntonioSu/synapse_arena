@@ -1,9 +1,85 @@
 import { Router } from 'express';
 import { db } from '../db/client';
 import { redisClient } from '../services/redis-client';
+import { aiService } from '../services/minimax-service';
 import { asyncHandler } from '../middleware/async-handler';
 
 const router = Router();
+
+const ongoingExtractions = new Set<string>();
+
+interface FeaturedQuoteRow { content: string; stance: 'pro' | 'con' }
+
+async function getFeaturedQuotesFromDb(topicId: string): Promise<FeaturedQuoteRow[]> {
+  const r = await db.query(
+    `SELECT content, stance FROM topic_quotes
+     WHERE topic_id = $1 AND is_featured = true
+     ORDER BY created_at ASC`,
+    [topicId]
+  );
+  return r.rows.map((row: any) => ({ content: row.content, stance: row.stance }));
+}
+
+async function saveFeaturedQuotesToDb(topicId: string, quotes: FeaturedQuoteRow[]): Promise<void> {
+  if (quotes.length === 0) return;
+  await db.query(`UPDATE topic_quotes SET is_featured = false WHERE topic_id = $1`, [topicId]);
+  const placeholders: string[] = [];
+  const params: any[] = [topicId];
+  quotes.forEach((q, i) => {
+    placeholders.push(`($1, $${i * 2 + 2}, $${i * 2 + 3}, true, 'llm')`);
+    params.push(q.content, q.stance);
+  });
+  await db.query(
+    `INSERT INTO topic_quotes (topic_id, content, stance, is_featured, generated_by)
+     VALUES ${placeholders.join(', ')}`,
+    params
+  );
+}
+
+async function triggerQuoteExtraction(topicId: string): Promise<void> {
+  if (ongoingExtractions.has(topicId)) return;
+  ongoingExtractions.add(topicId);
+  try {
+    const [topicR, commentsR] = await Promise.all([
+      db.query(
+        `SELECT title, pro_stance, con_stance FROM topics WHERE topic_id = $1`,
+        [topicId]
+      ),
+      db.query(
+        `SELECT content, stance, author_name, author_type
+         FROM comments WHERE topic_id = $1
+         ORDER BY created_at DESC LIMIT 60`,
+        [topicId]
+      ),
+    ]);
+    if (topicR.rows.length === 0) return;
+    if (commentsR.rows.length < 3) {
+      console.log(`⏭️  Topic ${topicId} 评论数 < 3，跳过金句提炼`);
+      return;
+    }
+
+    const topic = topicR.rows[0];
+    console.log(`🔍 开始提炼金句 topic=${topicId} comments=${commentsR.rows.length}`);
+    const quotes = await aiService.extractQuotes({
+      topicTitle: topic.title,
+      proStance: topic.pro_stance,
+      conStance: topic.con_stance,
+      comments: commentsR.rows,
+    });
+
+    if (quotes.length > 0) {
+      await saveFeaturedQuotesToDb(topicId, quotes);
+      await redisClient.setFeaturedQuotes(topicId, quotes, 600);
+      console.log(`✅ 金句已入库 topic=${topicId} count=${quotes.length}`);
+    } else {
+      console.warn(`⚠️  LLM 未返回有效金句 topic=${topicId}`);
+    }
+  } catch (err) {
+    console.error(`❌ 金句提炼失败 topic=${topicId}:`, err);
+  } finally {
+    ongoingExtractions.delete(topicId);
+  }
+}
 
 router.get('/categories', asyncHandler(async (req, res) => {
   const result = await db.query(
@@ -102,6 +178,25 @@ router.get('/:topicId', asyncHandler(async (req, res) => {
 
   const battleState = await redisClient.getBattleState(topicId);
   res.json({ success: true, data: { ...result.rows[0], battle_state: battleState } });
+}));
+
+router.get('/:topicId/quotes', asyncHandler(async (req, res) => {
+  const { topicId } = req.params;
+
+  const dbQuotes = await getFeaturedQuotesFromDb(topicId);
+
+  if (dbQuotes.length === 0) {
+    triggerQuoteExtraction(topicId).catch(() => {});
+    return res.json({ success: true, data: [], pending: true });
+  }
+
+  res.json({ success: true, data: dbQuotes });
+}));
+
+router.post('/:topicId/quotes/refresh', asyncHandler(async (req, res) => {
+  const { topicId } = req.params;
+  triggerQuoteExtraction(topicId).catch(() => {});
+  res.json({ success: true, data: { topic_id: topicId, refresh_triggered: true } });
 }));
 
 router.get('/:topicId/comments', asyncHandler(async (req, res) => {

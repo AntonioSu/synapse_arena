@@ -59,6 +59,17 @@ class RedisClient {
     return newState;
   }
 
+  async getFeaturedQuotes(topicId: string) {
+    const key = `topic:${topicId}:quotes`;
+    const data = await this.client.get(key);
+    return data ? JSON.parse(data) : null;
+  }
+
+  async setFeaturedQuotes(topicId: string, quotes: any[], ttl = 600) {
+    const key = `topic:${topicId}:quotes`;
+    await this.client.set(key, JSON.stringify(quotes), 'EX', ttl);
+  }
+
   async getCachedHotTopics() {
     const key = 'zhihu:hot_topics';
     const data = await this.client.get(key);
