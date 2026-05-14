@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { zhihuAPI } from './zhihu-api';
-import { aiService } from './minimax-service';
+import { aiService } from './llm-service';
 import { db } from '../db/client';
 import { redisClient } from './redis-client';
 import { coldStartService } from './cold-start';

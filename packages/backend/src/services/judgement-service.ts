@@ -1,5 +1,5 @@
 import { db } from '../db/client';
-import { aiService } from './minimax-service';
+import { aiService } from './llm-service';
 import { redisClient } from './redis-client';
 
 interface JudgeableComment {

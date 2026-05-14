@@ -1,5 +1,5 @@
 import { db } from '../db/client';
-import { aiService } from '../services/minimax-service';
+import { aiService } from '../services/llm-service';
 import { v4 as uuidv4 } from 'uuid';
 
 async function seedDebates() {

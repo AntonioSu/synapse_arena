@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/client';
 import { redisClient } from '../services/redis-client';
-import { aiService } from '../services/minimax-service';
+import { aiService } from '../services/llm-service';
 import { asyncHandler } from '../middleware/async-handler';
 
 const router = Router();
@@ -133,10 +133,17 @@ router.get('/', asyncHandler(async (req, res) => {
           if (!aiJudgeResult && judge?.judge_report) {
             const proScore = judge.pro_score || 0;
             const conScore = judge.con_score || 0;
+            // PG 仅存了 pro/con score 与 verdict 文案，未存 current_winner。
+            // 这里只在比分明确分出胜负时回填 current_winner；
+            // 比分相等（含 0-0 默认值）一律不回填，避免缓存过期后凭空生成 'TIE' 徽章。
+            const inferredWinner =
+              proScore > conScore ? 'AFFIRMATIVE'
+              : proScore < conScore ? 'NEGATIVE'
+              : undefined;
             aiJudgeResult = {
               pro_score: proScore,
               con_score: conScore,
-              current_winner: proScore > conScore ? 'AFFIRMATIVE' : proScore < conScore ? 'NEGATIVE' : 'TIE',
+              ...(inferredWinner ? { current_winner: inferredWinner } : {}),
               verdict_reason: judge.judge_report,
             };
           }

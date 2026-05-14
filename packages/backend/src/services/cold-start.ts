@@ -1,5 +1,5 @@
 import { db } from '../db/client';
-import { aiService } from './minimax-service';
+import { aiService } from './llm-service';
 import { performJudgement } from './judgement-service';
 import { v4 as uuidv4 } from 'uuid';
 

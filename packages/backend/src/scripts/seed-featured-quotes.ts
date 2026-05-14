@@ -1,5 +1,5 @@
 import { db } from '../db/client';
-import { aiService } from '../services/minimax-service';
+import { aiService } from '../services/llm-service';
 import { redisClient } from '../services/redis-client';
 
 function readArg(name: string, fallback: number): number {

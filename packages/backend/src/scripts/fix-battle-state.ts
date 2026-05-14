@@ -1,6 +1,6 @@
 import { db } from '../db/client';
 import { redisClient } from '../services/redis-client';
-import { aiService } from '../services/minimax-service';
+import { aiService } from '../services/llm-service';
 
 async function fixBattleState(topicId: string) {
   try {

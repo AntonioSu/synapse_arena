@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { config } from '../config';
 
-class MiniMaxService {
+class LLMService {
   private apiKey: string;
   private apiUrl: string;
   private model: string;
@@ -65,7 +65,7 @@ class MiniMaxService {
 
   private mockResponse(messages: Array<{ role: string; content: string }>): string {
     const lastMessage = messages[messages.length - 1]?.content || '';
-    return MiniMaxService.MOCK_HANDLERS.find(h => h.test.test(lastMessage))?.response()
+    return LLMService.MOCK_HANDLERS.find(h => h.test.test(lastMessage))?.response()
       ?? '这是一个值得深思的问题，让我们理性讨论一下。';
   }
 
@@ -362,5 +362,4 @@ ${topicsText}
   }
 }
 
-export const minimaxService = new MiniMaxService();
-export const aiService = minimaxService; // 导出为aiService以便统一调用
+export const aiService = new LLMService();

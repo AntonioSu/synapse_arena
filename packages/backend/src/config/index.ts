@@ -50,10 +50,4 @@ export const config = {
     apiKey: process.env.LLM_API_KEY || '',
     model: process.env.LLM_MODEL || '',
   },
-
-  minimax: {
-    apiKey: process.env.MINIMAX_API_KEY || '',
-    groupId: process.env.MINIMAX_GROUP_ID || '',
-    baseURL: 'https://api.minimax.io/v1',
-  },
 };

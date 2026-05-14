@@ -179,7 +179,7 @@ GET  /api/auth/me                 # 通过 Bearer token 获取当前用户
 | `cold-start.ts` | 为新话题批量生成 NPC 对战底料 |
 | `butterfly-effect.ts` | 用户发言后触发 10 轮 NPC 连环响应（非阻塞） |
 | `judgement-service.ts` | 战况快照与结构化播报（正反方支点 / 人类变量 / verdict） |
-| `minimax-service.ts` | 通用 LLM 封装（OpenAI 兼容），含 `generateNPCResponse` / `judgeDebate` / `selectControversialTopics` |
+| `llm-service.ts` | 通用 LLM 封装（OpenAI 兼容，由 `LLM_API_URL` / `LLM_API_KEY` / `LLM_MODEL` 驱动），含 `generateNPCResponse` / `judgeDebate` / `selectControversialTopics` |
 | `zhihu-api.ts` | 知乎开放 API 调用 |
 | `zhihu-auth.ts` | 知乎 OAuth token 交换与刷新 |
 | `redis-client.ts` | 战况状态 / 缓存读写 |
