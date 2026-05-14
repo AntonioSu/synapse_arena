@@ -4,11 +4,18 @@ import { motion } from 'framer-motion';
 
 const CATEGORIES = [
   { key: 'all', label: '全部', icon: '🌐' },
+  { key: 'explosive', label: '推荐', icon: '💥' },
   { key: 'hot', label: '热点', icon: '🔥' },
   { key: 'controversial', label: '争议', icon: '⚡' },
   { key: 'tech', label: '科技', icon: '🤖' },
+  { key: 'science', label: '科学', icon: '🔬' },
+  { key: 'humanities', label: '人文', icon: '📚' },
+  { key: 'work', label: '职场', icon: '💼' },
+  { key: 'psychology', label: '心理', icon: '🧠' },
+  { key: 'emotion', label: '情感', icon: '💕' },
   { key: 'social', label: '社会', icon: '🏛️' },
   { key: 'life', label: '生活', icon: '☕' },
+  { key: 'other', label: '其他', icon: '🎲' },
 ] as const;
 
 interface Props {

@@ -16,8 +16,6 @@ export default function CommentInput({ topicId }: Props) {
   const [content, setContent] = useState('');
   const [stance, setStance] = useState<'pro' | 'con' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [aiContent, setAiContent] = useState('');
-  const [showAiPreview, setShowAiPreview] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const handleStanceClick = (s: 'pro' | 'con') => {
@@ -50,33 +48,6 @@ export default function CommentInput({ topicId }: Props) {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleAIAssist = async () => {
-    if (!stance) return;
-
-    try {
-      setIsLoading(true);
-      const response = await commentsAPI.aiAssist({
-        topic_id: topicId,
-        stance,
-        user_id: user?.user_id || 'anonymous',
-      });
-
-      if (response.data.success) {
-        setAiContent(response.data.data.content);
-        setShowAiPreview(true);
-      }
-    } catch (error) {
-      console.error('AI assist failed:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const useAIContent = () => {
-    setContent(aiContent);
-    setShowAiPreview(false);
   };
 
   const charCount = content.length;
@@ -118,14 +89,14 @@ export default function CommentInput({ topicId }: Props) {
           >
             <button
               onClick={() => handleStanceClick('pro')}
-              className="cyber-button px-6 sm:px-8 py-2.5 sm:py-3 border-red-400 text-red-500 hover:bg-red-50"
+              className="cyber-button px-6 sm:px-8 py-2.5 sm:py-3 border-cyan-400 text-cyan-600 hover:bg-cyan-50"
               aria-label="support pro side"
             >
               {'\u63f4\u52a9\u6b63\u65b9'}
             </button>
             <button
               onClick={() => handleStanceClick('con')}
-              className="cyber-button px-6 sm:px-8 py-2.5 sm:py-3 border-cyan-400 text-cyan-600 hover:bg-cyan-50"
+              className="cyber-button px-6 sm:px-8 py-2.5 sm:py-3 border-rose-400 text-rose-500 hover:bg-rose-50"
               aria-label="support con side"
             >
               {'\u63f4\u52a9\u53cd\u65b9'}
@@ -133,7 +104,7 @@ export default function CommentInput({ topicId }: Props) {
           </motion.div>
         )}
 
-        {stance && !showAiPreview && (
+        {stance && (
           <motion.div
             key="input-area"
             initial={{ opacity: 0, y: 8 }}
@@ -144,7 +115,7 @@ export default function CommentInput({ topicId }: Props) {
           >
             <div className="flex items-center justify-between">
               <span className={`text-sm font-medium ${
-                stance === 'pro' ? 'text-red-500' : 'text-cyan-600'
+                stance === 'pro' ? 'text-cyan-600' : 'text-rose-500'
               }`}>
                 {stance === 'pro' ? '\u5f53\u524d\u7acb\u573a: \u6b63\u65b9' : '\u5f53\u524d\u7acb\u573a: \u53cd\u65b9'}
               </span>
@@ -184,65 +155,17 @@ export default function CommentInput({ topicId }: Props) {
                 {charCount}/150
               </span>
 
-              <div className="flex gap-2 sm:gap-3">
-                <button
-                  onClick={handleAIAssist}
-                  disabled={isLoading}
-                  className="cyber-button px-4 sm:px-6 py-2 text-xs sm:text-sm"
-                >
-                  {isLoading ? '[\u5904\u7406\u4e2d...]' : '\u5206\u8eab\u4ee3\u6253'}
-                </button>
-
-                <button
-                  onClick={handleSubmit}
-                  disabled={isLoading || !content.trim()}
-                  className="cyber-button primary px-4 sm:px-6 py-2 text-xs sm:text-sm"
-                >
-                  {isLoading ? '[\u53d1\u9001\u4e2d...]' : '\u53d1\u9001'}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {showAiPreview && (
-          <motion.div
-            key="ai-preview"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-4"
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
-              <span className="text-sm text-cyan-600 font-mono">
-                {'AI\u5206\u8eab\u751f\u6210\u7684\u53d1\u8a00'}
-              </span>
-            </div>
-
-            <div className="bg-cyan-50/60 border border-cyan-200 rounded p-3 sm:p-4">
-              <p className="text-sm text-gray-800 leading-relaxed">
-                {aiContent}
-              </p>
-            </div>
-
-            <div className="flex gap-2 sm:gap-3 justify-end">
               <button
-                onClick={() => setShowAiPreview(false)}
-                className="cyber-button px-4 sm:px-6 py-2 text-xs sm:text-sm"
-              >
-                {'\u91cd\u65b0\u751f\u6210'}
-              </button>
-              <button
-                onClick={useAIContent}
+                onClick={handleSubmit}
+                disabled={isLoading || !content.trim()}
                 className="cyber-button primary px-4 sm:px-6 py-2 text-xs sm:text-sm"
               >
-                {'\u4f7f\u7528\u6b64\u5185\u5bb9'}
+                {isLoading ? '[\u53d1\u9001\u4e2d...]' : '\u53d1\u9001'}
               </button>
             </div>
           </motion.div>
         )}
+
       </AnimatePresence>
     </div>
   );

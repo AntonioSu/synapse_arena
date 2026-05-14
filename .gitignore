@@ -11,3 +11,13 @@ coverage
 .vercel
 .cache
 *.tsbuildinfo
+*.xlsx
+*.csv
+*.json
+*.xml
+*.yaml
+*.yml
+*.html
+*.css
+*.js
+*.jsx

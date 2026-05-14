@@ -7,7 +7,6 @@
 - **自动选题引擎**：每日抓取知乎热榜，AI筛选10个争议话题
 - **80轮冷启动**：新话题自动生成80轮AI对战底料
 - **20个极端NPC**：资本黑客、虚无主义者、反卷斗士等人设
-- **SecondMe集成**：软记忆驱动的AI分身代打
 - **蝴蝶效应**：用户发言触发10轮NPC连环响应
 - **混合裁决**：AI判官 + 人类投票双模式
 - **赛博朋克UI**：扫描线、霓虹光、幽灵按钮
@@ -145,7 +144,6 @@ GET  /api/topics/:id/comments # 获取评论列表
 #### 评论相关
 ```
 POST /api/comments         # 创建评论
-POST /api/comments/ai-assist # AI分身代打
 ```
 
 #### 用户认证
@@ -250,11 +248,6 @@ const result = await openaiService.judgeDebate({
   "personality": "INFP型，偏感性",
   "speech_style": "温和、有同理心"
 }
-```
-
-### 3. AI分身代打
-```
-用户点击"分身代打" → 传入软记忆 → GPT-4生成符合用户三观的回复 → 预览确认
 ```
 
 ## 📊 数据库表

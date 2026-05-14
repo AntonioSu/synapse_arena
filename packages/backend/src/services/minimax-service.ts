@@ -131,44 +131,6 @@ ${replyTo ? `【你必须回应的攻击】\n${replyTo}` : ''}
     });
   }
 
-  async generateUserAIResponse(params: {
-    softMemory: any;
-    topicTitle: string;
-    stance: 'pro' | 'con';
-    recentComments: Array<{ author_name: string; content: string }>;
-  }): Promise<string> {
-    const { softMemory, topicTitle, stance, recentComments } = params;
-
-    const contextMessages = recentComments
-      .slice(-3)
-      .map((c) => `${c.author_name}: ${c.content}`)
-      .join('\n');
-
-    const userPrompt = `
-你需要以以下人格特征发言：
-- 价值观：${softMemory.values?.join('、') || '未知'}
-- 性格：${softMemory.personality || '未知'}
-- 语气：${softMemory.speech_style || '未知'}
-
-当前辩题：${topicTitle}
-你的立场：${stance === 'pro' ? '支持' : '反对'}
-
-最近发言：
-${contextMessages}
-
-请生成一条150字以内的观点，必须：
-1. 符合用户的价值观和性格
-2. 带有个人色彩和真实感
-3. 不要太官方，要有人情味
-`;
-
-    return await this.chatCompletion({
-      messages: [{ role: 'user', content: userPrompt }],
-      temperature: 0.8,
-      max_tokens: 300,
-    });
-  }
-
   async judgeDebate(params: {
     topicTitle: string;
     proComments: Array<{ content: string; author_type?: string; author_name?: string }>;
@@ -286,6 +248,7 @@ ${conSummary}
    - "tech"（科技数码）
    - "social"（社会民生）
    - "life"（生活方式）
+   - "explosive"（炸裂辩题 - 特别具有冲击力、容易引发激烈讨论的话题）
 
 话题列表：
 ${topicsText}

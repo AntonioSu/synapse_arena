@@ -20,7 +20,7 @@ function CommentSkeleton() {
       {[1, 2, 3].map((i) => (
         <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : ''}`}>
           <div className={`max-w-[75%] flex gap-3 ${i % 2 === 0 ? 'flex-row-reverse' : ''}`}>
-            <div className="skeleton w-8 h-8 rounded-sm flex-shrink-0" />
+            <div className="skeleton w-10 h-10 rounded-sm flex-shrink-0" />
             <div className="flex-1 space-y-2">
               <div className="skeleton h-3 w-24 rounded" />
               <div className="skeleton h-16 w-full rounded" />
