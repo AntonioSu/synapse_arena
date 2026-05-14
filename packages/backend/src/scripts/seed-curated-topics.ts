@@ -1,4 +1,6 @@
 import { db } from '../db/client';
+import { isZhihuQuestionLink, normalizeZhihuQuestionLink } from '../utils/zhihu-link';
+import { redisClient } from '../services/redis-client';
 
 interface CuratedTopic {
   title: string;
@@ -7,7 +9,8 @@ interface CuratedTopic {
   background: string;
   category: string;
   heat_score: number;
-  zhihu_link?: string;
+  // 必须是真实的 https://www.zhihu.com/question/{id} 链接，缺失会被 main() 跳过
+  zhihu_link: string;
 }
 
 const curatedTopics: CuratedTopic[] = [
@@ -18,7 +21,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '大语言模型和AIGC爆发，每月有海量AI生成内容充斥网络，严重冲击绘画、写作等传统内容创作行业。',
     category: 'tech',
     heat_score: 9500,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=AI发展+人类创作者+存在意义',
+    zhihu_link: 'https://www.zhihu.com/question/2035684362935645409',
   },
   {
     title: '语言的边界 是 / 不是 人类的边界',
@@ -27,7 +30,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '维特根斯坦的经典哲学命题，在脑机接口、AI语义理解和神经科学的前沿发展中被重新审视。',
     category: 'controversial',
     heat_score: 8800,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=语言的边界+是不是+人类的边界+维特根斯坦',
+    zhihu_link: 'https://www.zhihu.com/question/1999745621553333881',
   },
   {
     title: '我们 该 / 不该 努力成为"情绪稳定的大人"',
@@ -36,7 +39,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '职场与社交中极度推崇"情绪稳定"，引发年轻人关于"压抑天性"、"自我内耗"还是"成熟标志"的深度讨论。',
     category: 'social',
     heat_score: 9200,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=该不该努力成为情绪稳定的大人',
+    zhihu_link: 'https://www.zhihu.com/question/1900576960557594234',
   },
   {
     title: '美术馆着火，救名画还是救猫？',
@@ -54,7 +57,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '一个关于绝对期限的思维实验。隐喻在面对不可抗拒的时代洪流（如奇点降临或系统性崩塌）时，个体究竟该选择向内切断过去的历史羁绊，还是向外燃烧最后的自我价值。',
     category: 'life',
     heat_score: 8500,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=如果一年后被外星人抓走+了结恩怨+实现梦想',
+    zhihu_link: 'https://www.zhihu.com/question/612852621',
   },
   {
     title: '按下按钮复活死去的爱人，但他将永远失去关于你的记忆，按 / 不按？',
@@ -63,7 +66,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '极限的情感伦理测试。在记忆可以被篡改、肉体可以被延续的未来设想下，探讨人类认同的核心究竟是生物学上的"活着"，还是由记忆和经历编织的"独特数据集"。',
     category: 'controversial',
     heat_score: 9300,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=按下按钮复活死去的爱人+失去关于你的记忆',
+    zhihu_link: 'https://www.zhihu.com/question/599840664',
   },
   {
     title: '真诚永远 是 / 不是 必杀技',
@@ -72,7 +75,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '「真诚永远是必杀技」成为社交热词，但在感情、职场与日常生活中，直接的真诚有时也会伤害他人。真诚究竟是万能解药还是一厢情愿？',
     category: 'social',
     heat_score: 9100,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=真诚永远是必杀技',
+    zhihu_link: 'https://www.zhihu.com/question/1976615525720286371',
   },
   {
     title: '年轻人 该 / 不该 按照社会的期待去活',
@@ -81,7 +84,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '考公、考研、买房、结婚……社会对年轻人有一套完整的人生时间表。越来越多年轻人在「按部就班」与「勇敢做自己」之间挣扎。',
     category: 'social',
     heat_score: 9200,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=年轻人该不该按照社会的期待去活',
+    zhihu_link: 'https://www.zhihu.com/question/2032975038589166206',
   },
   {
     title: '应该 / 不应该 对初入职场的年轻人提倡「钝感力」',
@@ -90,7 +93,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '「钝感力」源自日本作家渡边淳一，意为「迟钝的力量」。近年频繁出现在职场语境中，鼓励年轻人对批评、挫折不那么敏感，但也引发了「是自我保护还是自我麻痹」的争论。',
     category: 'social',
     heat_score: 8900,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=初入职场+年轻人+钝感力',
+    zhihu_link: 'https://www.zhihu.com/question/662639638',
   },
   {
     title: '当代年轻人应该活得更现实 / 更理想',
@@ -99,7 +102,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '高房价、内卷与就业压力让越来越多年轻人放弃曾经的理想，转向务实生存。「少年你还向着当初的理想前进，还是已经妥协给了现实？」引发广泛共鸣。',
     category: 'life',
     heat_score: 9000,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=当代年轻人+活得更现实还是更理想',
+    zhihu_link: 'https://www.zhihu.com/question/2022817373888020498',
   },
   {
     title: '人工智能发展到能帮人类完成一切工作，是可喜 / 可悲',
@@ -108,7 +111,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '随着ChatGPT等AI的飞速发展，AI正在替代越来越多的人类工作。当某天AI能完成一切工作，人类的生活会如何？这是解放还是存在危机？',
     category: 'tech',
     heat_score: 9400,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=人工智能+帮助人类完成一切工作+可喜还是可悲',
+    zhihu_link: 'https://www.zhihu.com/question/2016889470092272129',
   },
   {
     title: '男朋友出轨最好的闺蜜，你会选择爱情 / 友情',
@@ -117,7 +120,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '经典的情感博弈困境，当爱情与友情的双重背叛同时发生，旁观者清当局者迷，你到底先保全哪一段关系？',
     category: 'controversial',
     heat_score: 9300,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=男朋友出轨最好的闺蜜+选择爱情还是友情',
+    zhihu_link: 'https://www.zhihu.com/question/1995420436528374417',
   },
   {
     title: '应届生求职是选择在大城市卷 / 去小城市躺平',
@@ -216,7 +219,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '越来越多男性拒绝传统的「养家糊口」角色，不买房、不结婚、不生育。这究竟是性别平等的进步，还是社会责任感的集体退化？',
     category: 'controversial',
     heat_score: 9200,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=男性去责任化',
+    zhihu_link: 'https://www.zhihu.com/question/2009161870146295591',
   },
   {
     title: 'AI工具的普及提升了 / 抑制了人类思维能力',
@@ -288,7 +291,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '性别议题持续升温，「贤妻良母」这一传统角色被重新审视。支持者认为是中华美德，反对者视其为封建残余。传统与现代的碰撞中，女性角色何去何从？',
     category: 'controversial',
     heat_score: 9200,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=贤妻良母+文化传统+精华还是糟粕',
+    zhihu_link: 'https://www.zhihu.com/question/2019011961703146425',
   },
   {
     title: '成家立业后就该告别游戏 / 一屋子游戏机才是终极浪漫',
@@ -297,7 +300,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '一男子打造游戏房被妻子和网友骂「幼稚」引发热议。成年人的爱好是否应该为家庭让步？保持少年感是浪漫还是不成熟？',
     category: 'life',
     heat_score: 8700,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=成家立业+告别游戏+游戏房+浪漫',
+    zhihu_link: 'https://www.zhihu.com/question/2000229798727938199',
   },
   {
     title: '主动加班是努力进取 / 无意义的职场消耗',
@@ -315,7 +318,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '关于公有制与私有制的争论贯穿了人类数百年的政治经济史，至今仍是最具争议性的制度命题之一。',
     category: 'controversial',
     heat_score: 8500,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=公有制+私有制+善恶',
+    zhihu_link: 'https://www.zhihu.com/question/2008444305426113481',
   },
   {
     title: '松鼠囤积远超所需的坚果，是写在基因里的生存焦虑 / 动物界的「贪婪」',
@@ -324,7 +327,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '松鼠囤积行为的有趣隐喻：从动物本能到人类社会的「囤积焦虑」——房子、金钱、资源……我们真的需要那么多吗？',
     category: 'life',
     heat_score: 8400,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=松鼠+囤积坚果+生存焦虑+贪婪',
+    zhihu_link: 'https://www.zhihu.com/question/2020687310618896259',
   },
   {
     title: '长期在压抑环境中自我内耗，治愈的关键是和解过去 / 放下期待',
@@ -369,7 +372,7 @@ const curatedTopics: CuratedTopic[] = [
     background: 'AI时代下，年轻人的机会版图正在重绘。有人欢呼平等化的工具红利，有人忧虑加速固化的阶层壁垒。AI究竟是机会的放大器还是不平等的加速器？',
     category: 'tech',
     heat_score: 9300,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=AI+年轻人+机会变多还是变少',
+    zhihu_link: 'https://www.zhihu.com/question/2016930184062789503',
   },
   {
     title: '奥斯卡禁用AI演员、限制AI剧本，是守护创作本质 / 开时代倒车',
@@ -396,7 +399,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '明代小说《杜十娘怒沉百宝箱》中，杜十娘投江自尽的结局引发了跨越百年的讨论。在当代女性主义视角下，这个经典故事被重新解读。',
     category: 'controversial',
     heat_score: 8600,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=杜十娘+结局+反抗还是无奈',
+    zhihu_link: 'https://www.zhihu.com/question/2016941679064609782',
   },
   {
     title: '不幸福的婚姻，该及时止损 / 忍气吞声熬下去',
@@ -405,7 +408,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '离婚率逐年攀升，「及时止损」成为新一代的婚姻哲学。但老一辈坚信「日子是过出来的」。不幸福的婚姻，到底是走还是留？',
     category: 'controversial',
     heat_score: 9100,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=不幸福的婚姻+及时止损+还是忍气吞声',
+    zhihu_link: 'https://www.zhihu.com/question/2022575863841978022',
   },
   {
     title: '自卑的「解药」是「停止比较」/ 「直面竞争」',
@@ -432,7 +435,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '约翰·密尔的经典哲学命题：「做一个不满足的苏格拉底比做一头满足的猪好」。在内卷与精神内耗并存的时代，这个问题比以往任何时候都更切身。',
     category: 'controversial',
     heat_score: 9000,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=宁愿做快乐的猪+还是痛苦的苏格拉底',
+    zhihu_link: 'https://www.zhihu.com/question/1906847851700552831',
   },
   {
     title: '已婚遇到精神完全同频的人，该克制一生 / 抓住这一次',
@@ -441,7 +444,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '婚后遇到「对的人」是无数影视剧和现实生活中的经典困境。在婚姻的责任与灵魂的渴望之间，道德与人性展开最激烈的拉锯。',
     category: 'controversial',
     heat_score: 9400,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=已婚+遇到精神同频+灵魂伴侣+克制还是抓住',
+    zhihu_link: 'https://www.zhihu.com/question/2024016293058152365',
   },
   {
     title: '婚姻是选择人品 / 外貌',
@@ -450,7 +453,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '「好看的皮囊千篇一律，有趣的灵魂万里挑一」vs「始于颜值才能忠于人品」。婚姻这笔人生最大的投资，赌的到底是什么？',
     category: 'life',
     heat_score: 8600,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=婚姻+选择人品+还是外貌',
+    zhihu_link: 'https://www.zhihu.com/question/3624695858',
   },
   {
     title: '在职场中，学历更重要 / 能力更重要',
@@ -468,7 +471,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '经典的爱情与面包之争。在婚恋市场越来越现实的今天，这个问题让每个人都在爱情理想主义和经济现实主义之间左右为难。',
     category: 'controversial',
     heat_score: 9200,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=嫁给+很爱你但穷+还是有钱但不爱你',
+    zhihu_link: 'https://www.zhihu.com/question/1925093150189392049',
   },
   {
     title: '「贤夫良父」是对男性的褒扬 / 限制',
@@ -477,7 +480,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '当「贤妻良母」被女性主义质疑时，「贤夫良父」作为对等概念出现。这个称呼是性别平等的体现还是另一种形式的角色绑架？',
     category: 'social',
     heat_score: 8500,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=贤夫良父+褒扬+还是限制',
+    zhihu_link: 'https://www.zhihu.com/question/331288944',
   },
   {
     title: '「玩家必须适应游戏」/ 「应该做让玩家爽的游戏」',
@@ -495,7 +498,7 @@ const curatedTopics: CuratedTopic[] = [
     background: '学历贬值与技能革命同时发生，「学历至上」的传统观念正在被挑战。在AI时代，到底是文凭、能力还是人脉更能决定一个人的发展？',
     category: 'social',
     heat_score: 8700,
-    zhihu_link: 'https://www.zhihu.com/search?type=content&q=学历重要+还是+能力和人脉更重要',
+    zhihu_link: 'https://www.zhihu.com/question/2020287897811558879',
   },
   // ========== 以下为从分类.xlsx新增的话题 ==========
   {
@@ -905,7 +908,18 @@ async function main() {
     console.log('📝 Inserting curated debate topics...\n');
 
     let inserted = 0;
+    let skipped = 0;
     for (const topic of curatedTopics) {
+      // 强约束：策划话题必须显式提供 zhihu /question/{id} 链接。
+      // 没有就 skip 并打印警告，避免兜底 search 链接污染数据库。
+      if (!isZhihuQuestionLink(topic.zhihu_link)) {
+        skipped++;
+        console.log(`⚠️  SKIP (missing/invalid zhihu_link): ${topic.title}`);
+        console.log(`     got: ${topic.zhihu_link ?? '(empty)'}`);
+        continue;
+      }
+      const normalizedLink = normalizeZhihuQuestionLink(topic.zhihu_link)!;
+
       const existing = await db.query(
         `SELECT topic_id FROM topics WHERE title = $1`,
         [topic.title]
@@ -915,22 +929,28 @@ async function main() {
         console.log(`⏭️  Already exists: ${topic.title}`);
         await db.query(
           `UPDATE topics SET pro_stance = $1, con_stance = $2, background = $3, category = $4, heat_score = $5, zhihu_link = $6 WHERE title = $7`,
-          [topic.pro_stance, topic.con_stance, topic.background, topic.category, topic.heat_score, topic.zhihu_link || null, topic.title]
+          [topic.pro_stance, topic.con_stance, topic.background, topic.category, topic.heat_score, normalizedLink, topic.title]
         );
         continue;
       }
 
-      await db.query(
+      const insertResult = await db.query<{ topic_id: string }>(
         `INSERT INTO topics (title, pro_stance, con_stance, background, heat_score, category, zhihu_link, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')`,
-        [topic.title, topic.pro_stance, topic.con_stance, topic.background, topic.heat_score, topic.category, topic.zhihu_link || null]
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'active') RETURNING topic_id`,
+        [topic.title, topic.pro_stance, topic.con_stance, topic.background, topic.heat_score, topic.category, normalizedLink]
       );
+      const newTopicId = insertResult.rows[0]?.topic_id;
+      if (newTopicId) {
+        // 与 topic-crawler 保持一致：新话题落库后初始化一份 Redis 战况，
+        // 否则前端首次进入会拿不到 battle_state，需要等 auto-maintenance 才能生成。
+        await redisClient.initBattleState(newTopicId);
+      }
 
       inserted++;
       console.log(`✅ Inserted: ${topic.title}`);
     }
 
-    console.log(`\n🎉 Done! Inserted ${inserted} new topics, ${curatedTopics.length - inserted} already existed.`);
+    console.log(`\n🎉 Done! Inserted ${inserted} new topics, ${curatedTopics.length - inserted - skipped} already existed, ${skipped} skipped (no valid zhihu /question/ link).`);
 
     const allTopics = await db.query(`SELECT topic_id, title, category FROM topics WHERE status = 'active' ORDER BY created_at DESC LIMIT 10`);
     console.log('\n📋 Latest active topics:');
@@ -938,9 +958,13 @@ async function main() {
       console.log(`  [${t.category}] ${t.title}`);
     }
 
+    await redisClient.close().catch(() => {});
+    await db.close().catch(() => {});
     process.exit(0);
   } catch (error) {
     console.error('❌ Failed:', error);
+    await redisClient.close().catch(() => {});
+    await db.close().catch(() => {});
     process.exit(1);
   }
 }

@@ -5,6 +5,22 @@ import { db } from '../db/client';
 import { redisClient } from './redis-client';
 import { coldStartService } from './cold-start';
 import { v4 as uuidv4 } from 'uuid';
+import { normalizeZhihuQuestionLink } from '../utils/zhihu-link';
+
+type RawHotTopic = { title: string; body: string; heat_score: number; zhihu_link?: string };
+type SelectedTopic = {
+  title: string;
+  pro_stance: string;
+  con_stance: string;
+  heat_score: number;
+  category?: string;
+  zhihu_link?: string;
+};
+
+const VALID_CATEGORIES = new Set([
+  'hot', 'controversial', 'tech', 'social', 'life', 'explosive',
+  'science', 'humanities', 'work', 'psychology', 'emotion', 'other',
+]);
 
 class TopicCrawlerService {
   private static readonly SEARCH_QUERIES = [
@@ -12,7 +28,7 @@ class TopicCrawlerService {
     '怎么看 热搜', '反转 事件', '社会热点 讨论',
   ];
 
-  private async fetchHotTopics(): Promise<Array<{ title: string; body: string; heat_score: number; zhihu_link?: string }>> {
+  private async fetchHotTopics(): Promise<RawHotTopic[]> {
     // 优先尝试热榜 API
     try {
       const billboardData = await zhihuAPI.getBillboard(3, 24);
@@ -50,136 +66,112 @@ class TopicCrawlerService {
   async fetchAndProcessTopics() {
     try {
       console.log('🕷️  Fetching hot topics from Zhihu...');
-
       const hotTopics = await this.fetchHotTopics();
-
       if (hotTopics.length === 0) {
         console.log('⚠️  No hot topics fetched');
         return [];
       }
 
-      // AI筛选并生成可辩论的话题
-      console.log('🤖 AI selecting controversial topics and generating debate stances...');
-      const selectedTopics = await aiService.selectControversialTopics(hotTopics);
-
-      // 把原始话题的 zhihu_link 匹配到 AI 生成的辩题上
-      for (const topic of selectedTopics) {
-        const match = hotTopics.find(
-          h => h.zhihu_link && (h.title.includes(topic.title) || topic.title.includes(h.title) ||
-            this.extractKeywords(topic.title).some(kw => h.title.includes(kw)))
-        );
-        if (match?.zhihu_link) {
-          (topic as any).zhihu_link = match.zhihu_link;
-        }
-      }
-
-      console.log(`✅ AI selected ${selectedTopics.length} controversial topics`);
-
-      // 3. 多样性过滤：提取关键词，同一关键词的话题最多保留 2 个
+      const selectedTopics = await this.selectAndAnnotate(hotTopics);
       const filteredTopics = this.filterByDiversity(selectedTopics, 2);
       console.log(`🔀 After diversity filter: ${filteredTopics.length} topics (from ${selectedTopics.length})`);
 
-      // 4. 检查现有话题数量
-      const existingResult = await db.query(
-        `SELECT COUNT(*) as count FROM topics WHERE status = 'active'`
-      );
-      const existingCount = parseInt(existingResult.rows[0]?.count || '0');
-      console.log(`📊 Currently ${existingCount} active topics in database`);
-
-      // 5. 存入数据库（补充新话题）
-      const topicIds: string[] = [];
-      for (const topic of filteredTopics) {
-        // 检查是否已存在相似标题（精确匹配）
-        const duplicateCheck = await db.query(
-          `SELECT topic_id FROM topics WHERE title = $1`,
-          [topic.title]
-        );
-
-        if (duplicateCheck.rows.length > 0) {
-          console.log(`⏭️  Skipping duplicate topic: ${topic.title}`);
-          continue;
-        }
-
-        // 检查是否已存在主题相似的话题（关键词匹配）
-        const keywords = this.extractKeywords(topic.title);
-        let tooSimilar = false;
-        for (const kw of keywords) {
-          const similarCheck = await db.query(
-            `SELECT COUNT(*) as count FROM topics WHERE status = 'active' AND title LIKE $1`,
-            [`%${kw}%`]
-          );
-          if (parseInt(similarCheck.rows[0]?.count || '0') >= 2) {
-            console.log(`⏭️  Skipping topic (already 2+ similar in DB for "${kw}"): ${topic.title}`);
-            tooSimilar = true;
-            break;
-          }
-        }
-        if (tooSimilar) continue;
-
-        const validCategories = ['hot', 'controversial', 'tech', 'social', 'life', 'explosive', 'science', 'humanities', 'work', 'psychology', 'emotion', 'other'];
-        const category = topic.category && validCategories.includes(topic.category) ? topic.category : 'hot';
-
-        const topicId = uuidv4();
-        const zhihuLink = (topic as any).zhihu_link || `https://www.zhihu.com/search?type=content&q=${encodeURIComponent(topic.title)}`;
-        await db.query(
-          `INSERT INTO topics (topic_id, title, pro_stance, con_stance, heat_score, category, zhihu_link, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [
-            topicId,
-            topic.title,
-            topic.pro_stance,
-            topic.con_stance,
-            topic.heat_score || 0,
-            category,
-            zhihuLink,
-            'active',
-          ]
-        );
-
-        // 初始化Redis战况
-        await redisClient.setBattleState(topicId, {
-          pro_count: 0,
-          con_count: 0,
-          pro_votes: 0,
-          con_votes: 0,
-          human_participants: 0,
-          ai_judge_result: {
-            pro_score: 50,
-            con_score: 50,
-            affirmative_summary: '',
-            negative_summary: '',
-            human_insight: null,
-            current_winner: 'TIE',
-            verdict_reason: '战斗尚未开始',
-          },
-        });
-
-        topicIds.push(topicId);
-        console.log(`✅ Created topic: ${topic.title}`);
-      }
-
-      const finalCount = existingCount + topicIds.length;
-      console.log(`📊 Total active topics: ${finalCount} (added ${topicIds.length})`);
-
-      // 5. 为所有新话题启动冷启动（生成初始辩论并执行AI裁判）
-      if (topicIds.length > 0) {
-        console.log(`\n🥶 Starting cold start for ${topicIds.length} new topics...\n`);
-        for (const topicId of topicIds) {
-          try {
-            await coldStartService.generateColdStartBattle(topicId, 20); // 20轮快速冷启动
-          } catch (error) {
-            console.error(`❌ Cold start failed for topic ${topicId}:`, error);
-            // 继续处理下一个话题
-          }
-        }
-        console.log(`\n✅ Cold start completed for all new topics\n`);
-      }
-
+      const topicIds = await this.insertNewTopics(filteredTopics);
+      await this.coldStartNewTopics(topicIds);
       return topicIds;
     } catch (error) {
       console.error('❌ Topic crawling failed:', error);
       throw error;
     }
+  }
+
+  /** AI 筛选 + 把原始 zhihu /question/{id} 链接回填到生成的辩题上。 */
+  private async selectAndAnnotate(hotTopics: RawHotTopic[]): Promise<SelectedTopic[]> {
+    console.log('🤖 AI selecting controversial topics and generating debate stances...');
+    const selected = (await aiService.selectControversialTopics(hotTopics)) as SelectedTopic[];
+
+    for (const topic of selected) {
+      const keywords = this.extractKeywords(topic.title);
+      const match = hotTopics.find(
+        (h) =>
+          h.zhihu_link &&
+          (h.title.includes(topic.title) ||
+            topic.title.includes(h.title) ||
+            keywords.some((kw) => h.title.includes(kw)))
+      );
+      const normalized = normalizeZhihuQuestionLink(match?.zhihu_link);
+      if (normalized) topic.zhihu_link = normalized;
+    }
+
+    console.log(`✅ AI selected ${selected.length} controversial topics`);
+    return selected;
+  }
+
+  /** 已存在 / 主题过相似 / 缺 question 链接时全部跳过；其余落库并初始化 Redis 战况。 */
+  private async insertNewTopics(topics: SelectedTopic[]): Promise<string[]> {
+    const existingResult = await db.query(`SELECT COUNT(*) as count FROM topics WHERE status = 'active'`);
+    const existingCount = parseInt(existingResult.rows[0]?.count || '0');
+    console.log(`📊 Currently ${existingCount} active topics in database`);
+
+    const topicIds: string[] = [];
+    for (const topic of topics) {
+      if (await this.shouldSkipTopic(topic)) continue;
+
+      const category = topic.category && VALID_CATEGORIES.has(topic.category) ? topic.category : 'hot';
+      const zhihuLink = normalizeZhihuQuestionLink(topic.zhihu_link)!;
+      const topicId = uuidv4();
+
+      await db.query(
+        `INSERT INTO topics (topic_id, title, pro_stance, con_stance, heat_score, category, zhihu_link, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [topicId, topic.title, topic.pro_stance, topic.con_stance, topic.heat_score || 0, category, zhihuLink, 'active']
+      );
+      await redisClient.initBattleState(topicId);
+      topicIds.push(topicId);
+      console.log(`✅ Created topic: ${topic.title}`);
+    }
+
+    console.log(`📊 Total active topics: ${existingCount + topicIds.length} (added ${topicIds.length})`);
+    return topicIds;
+  }
+
+  /** 三个跳过原因合并：精确重题、关键词主题已饱和、缺真实 question 链接。 */
+  private async shouldSkipTopic(topic: SelectedTopic): Promise<boolean> {
+    const dup = await db.query(`SELECT topic_id FROM topics WHERE title = $1`, [topic.title]);
+    if (dup.rows.length > 0) {
+      console.log(`⏭️  Skipping duplicate topic: ${topic.title}`);
+      return true;
+    }
+
+    for (const kw of this.extractKeywords(topic.title)) {
+      const similar = await db.query(
+        `SELECT COUNT(*) as count FROM topics WHERE status = 'active' AND title LIKE $1`,
+        [`%${kw}%`]
+      );
+      if (parseInt(similar.rows[0]?.count || '0') >= 2) {
+        console.log(`⏭️  Skipping topic (already 2+ similar in DB for "${kw}"): ${topic.title}`);
+        return true;
+      }
+    }
+
+    if (!normalizeZhihuQuestionLink(topic.zhihu_link)) {
+      console.log(`⏭️  Skipping (no zhihu /question/ link): ${topic.title}`);
+      return true;
+    }
+    return false;
+  }
+
+  private async coldStartNewTopics(topicIds: string[]): Promise<void> {
+    if (topicIds.length === 0) return;
+    console.log(`\n🥶 Starting cold start for ${topicIds.length} new topics...\n`);
+    for (const topicId of topicIds) {
+      try {
+        await coldStartService.generateColdStartBattle(topicId, 20); // 20 轮快速冷启动
+      } catch (error) {
+        console.error(`❌ Cold start failed for topic ${topicId}:`, error);
+      }
+    }
+    console.log(`\n✅ Cold start completed for all new topics\n`);
   }
 
   private extractKeywords(title: string): string[] {
@@ -195,12 +187,9 @@ class TopicCrawlerService {
     return keywords.slice(0, 3);
   }
 
-  private filterByDiversity(
-    topics: Array<{ title: string; pro_stance: string; con_stance: string; heat_score: number; category?: string }>,
-    maxPerKeyword: number
-  ) {
+  private filterByDiversity(topics: SelectedTopic[], maxPerKeyword: number): SelectedTopic[] {
     const keywordCount = new Map<string, number>();
-    const result: typeof topics = [];
+    const result: SelectedTopic[] = [];
 
     for (const topic of topics) {
       const keywords = this.extractKeywords(topic.title);

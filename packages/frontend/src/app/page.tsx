@@ -45,21 +45,6 @@ export default function Home() {
     loadTopics('explosive');
   }, [user]);
 
-  const loadCategories = async () => {
-    try {
-      const response = await topicsAPI.getCategories();
-      if (response.data.success) {
-        const counts: Record<string, number> = {};
-        for (const item of response.data.data.categories) {
-          counts[item.category] = parseInt(item.count);
-        }
-        setCategoryCounts(counts);
-      }
-    } catch (error) {
-      console.error('Failed to load categories:', error);
-    }
-  };
-
   const loadTopics = useCallback(async (category: string) => {
     try {
       setIsLoading(true);

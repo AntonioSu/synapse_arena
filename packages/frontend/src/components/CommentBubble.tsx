@@ -16,6 +16,8 @@ function formatTime(dateStr: string): string {
 export default function CommentBubble({ comment }: Props) {
   const isPro = comment.stance === 'pro';
   const isHuman = comment.author_type === 'human';
+  const displayName = comment.author_name || (isHuman ? '匿名观众' : 'NPC');
+  const avatarChar = displayName[0] || '?';
 
   const nameColor = isHuman
     ? 'text-green-600'
@@ -51,14 +53,14 @@ export default function CommentBubble({ comment }: Props) {
             className={`w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 flex items-center justify-center
               text-xs font-mono ${nameColor} border border-gray-200 rounded-sm`}
           >
-            {comment.author_name[0]}
+            {avatarChar}
           </div>
         </div>
 
         <div className="flex-1 min-w-0">
           <div className={`flex items-center gap-2 mb-1 ${isPro ? '' : 'justify-end'}`}>
             <span className={`text-[11px] font-medium ${nameColor}`}>
-              {comment.author_name}
+              {displayName}
             </span>
             <span className={`label-tag ${
               isHuman ? 'text-green-600 bg-green-50' : 'text-gray-400 bg-gray-100'

@@ -78,11 +78,14 @@ export default function BattleField({ topic }: Props) {
     socketService.joinBattle(topic.topic_id);
     socketService.onNewComment((comment) => addComment(comment));
     socketService.onBattleUpdate((state) => {
-      updateBattleState({
-        pro_count: state.pro_score ?? state.pro_count,
-        con_count: state.con_score ?? state.con_count,
+      // pro_score / con_score 是 LLM 0-100 评分，不能写到 pro_count / con_count（=评论条数）。
+      // 评论条数走 new_comment 事件 + 列表接口刷新维护，这里只更新 AI 裁决面板。
+      const update: Partial<{ pro_count: number; con_count: number; ai_judge_result: any }> = {
         ai_judge_result: state.ai_judge_result,
-      });
+      };
+      if (typeof state.pro_count === 'number') update.pro_count = state.pro_count;
+      if (typeof state.con_count === 'number') update.con_count = state.con_count;
+      updateBattleState(update);
     });
   };
 

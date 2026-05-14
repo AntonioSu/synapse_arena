@@ -13,49 +13,15 @@
  */
 import { db } from '../db/client';
 import { performJudgement } from '../services/judgement-service';
+import { fetchProConRecent } from '../services/comments-repo';
+import { runWorkerPool } from '../utils/worker-pool';
+import { parseJudgeCliArgs, sleep } from './_judge-cli';
 
 interface CandidateTopic {
   topic_id: string;
   title: string;
   pro_count: number;
   con_count: number;
-}
-
-interface CliOptions {
-  force: boolean;
-  limit: number | null;
-  delayMs: number;
-  concurrency: number;
-}
-
-function parseArgs(argv: string[]): CliOptions {
-  const opts: CliOptions = {
-    force: false,
-    limit: null,
-    delayMs: parseInt(process.env.JUDGE_DELAY_MS || '2000', 10),
-    concurrency: parseInt(process.env.JUDGE_CONCURRENCY || '1', 10),
-  };
-
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === '--force' || arg === '-f') {
-      opts.force = true;
-    } else if (arg === '--limit' || arg === '-n') {
-      const v = parseInt(argv[++i] || '0', 10);
-      if (v > 0) opts.limit = v;
-    } else if (arg.startsWith('--limit=')) {
-      const v = parseInt(arg.split('=')[1] || '0', 10);
-      if (v > 0) opts.limit = v;
-    } else if (arg === '--concurrency' || arg === '-c') {
-      const v = parseInt(argv[++i] || '0', 10);
-      if (v > 0) opts.concurrency = v;
-    } else if (arg.startsWith('--concurrency=')) {
-      const v = parseInt(arg.split('=')[1] || '0', 10);
-      if (v > 0) opts.concurrency = v;
-    }
-  }
-  if (opts.concurrency < 1) opts.concurrency = 1;
-  return opts;
 }
 
 async function findCandidates(force: boolean): Promise<CandidateTopic[]> {
@@ -84,22 +50,6 @@ async function findCandidates(force: boolean): Promise<CandidateTopic[]> {
   return result.rows;
 }
 
-async function fetchStanceComments(topicId: string, stance: 'pro' | 'con') {
-  const result = await db.query(
-    `SELECT content, author_type, author_name
-       FROM comments
-      WHERE topic_id = $1 AND stance = $2
-      ORDER BY created_at DESC
-      LIMIT 10`,
-    [topicId, stance]
-  );
-  return result.rows;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 interface RunStats {
   success: number;
   fail: number;
@@ -119,10 +69,7 @@ async function processOne(
   console.log(`${tag} ▶ ${t.title}  (pro=${t.pro_count} con=${t.con_count})`);
 
   try {
-    const [proComments, conComments] = await Promise.all([
-      fetchStanceComments(t.topic_id, 'pro'),
-      fetchStanceComments(t.topic_id, 'con'),
-    ]);
+    const { pro: proComments, con: conComments } = await fetchProConRecent(t.topic_id, 10);
 
     if (proComments.length === 0 && conComments.length === 0) {
       console.log(`${tag} ⏭️  正反方均无评论，跳过`);
@@ -156,30 +103,8 @@ async function processOne(
   if (delayMs > 0) await sleep(delayMs);
 }
 
-async function runWithConcurrency(
-  candidates: CandidateTopic[],
-  concurrency: number,
-  delayMs: number
-): Promise<RunStats> {
-  const stats: RunStats = { success: 0, fail: 0, done: 0, failures: [] };
-  let cursor = 0;
-  const total = candidates.length;
-
-  const worker = async (workerId: number) => {
-    while (true) {
-      const idx = cursor++;
-      if (idx >= total) return;
-      await processOne(candidates[idx], idx, total, workerId, stats, delayMs);
-    }
-  };
-
-  const workers = Array.from({ length: concurrency }, (_, i) => worker(i + 1));
-  await Promise.all(workers);
-  return stats;
-}
-
 async function main() {
-  const opts = parseArgs(process.argv.slice(2));
+  const opts = parseJudgeCliArgs(process.argv.slice(2));
 
   console.log('');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -203,7 +128,10 @@ async function main() {
   console.log(`\n📋 待处理 ${candidates.length} 个话题（并发 ${opts.concurrency}）`);
 
   const startedAt = Date.now();
-  const stats = await runWithConcurrency(candidates, opts.concurrency, opts.delayMs);
+  const stats: RunStats = { success: 0, fail: 0, done: 0, failures: [] };
+  await runWorkerPool(candidates, opts.concurrency, async (item, workerId, idx) => {
+    await processOne(item, idx, candidates.length, workerId, stats, opts.delayMs);
+  });
   const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1);
 
   console.log('');

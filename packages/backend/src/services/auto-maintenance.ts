@@ -16,10 +16,11 @@
  */
 import cron, { type ScheduledTask } from 'node-cron';
 import { db } from '../db/client';
-import { aiService } from './llm-service';
-import { redisClient } from './redis-client';
 import { coldStartService } from './cold-start';
 import { performJudgement } from './judgement-service';
+import { extractAndSaveFeaturedQuotes } from './quotes-service';
+import { fetchProConRecent } from './comments-repo';
+import { runWorkerPool } from '../utils/worker-pool';
 
 function intEnv(name: string, fallback: number): number {
   const v = parseInt(process.env[name] || '', 10);
@@ -49,24 +50,6 @@ interface MaintenanceStats {
   judgements: PhaseStats;
   quotes: QuoteStats;
   elapsedMs: number;
-}
-
-async function runWorkerPool<T>(
-  items: T[],
-  concurrency: number,
-  worker: (item: T, workerId: number) => Promise<void>
-): Promise<void> {
-  let cursor = 0;
-  const total = items.length;
-  const run = async (workerId: number) => {
-    while (true) {
-      const idx = cursor++;
-      if (idx >= total) return;
-      await worker(items[idx], workerId);
-    }
-  };
-  const handles = Array.from({ length: Math.min(concurrency, total) }, (_, i) => run(i + 1));
-  await Promise.all(handles);
 }
 
 class AutoMaintenanceService {
@@ -219,22 +202,9 @@ class AutoMaintenanceService {
     await runWorkerPool(topics, JUDGEMENT_CONCURRENCY, async (t, workerId) => {
       const tag = `[w${workerId} judge ${t.topic_id.slice(0, 8)}]`;
       try {
-        const [pro, con] = await Promise.all([
-          db.query(
-            `SELECT content, author_type, author_name FROM comments
-              WHERE topic_id = $1 AND stance = 'pro'
-              ORDER BY created_at DESC LIMIT 10`,
-            [t.topic_id]
-          ),
-          db.query(
-            `SELECT content, author_type, author_name FROM comments
-              WHERE topic_id = $1 AND stance = 'con'
-              ORDER BY created_at DESC LIMIT 10`,
-            [t.topic_id]
-          ),
-        ]);
+        const { pro, con } = await fetchProConRecent(t.topic_id, 10);
 
-        if (pro.rows.length === 0 && con.rows.length === 0) {
+        if (pro.length === 0 && con.length === 0) {
           console.log(`${tag} ⏭️  无正反方评论，跳过`);
           return;
         }
@@ -242,8 +212,8 @@ class AutoMaintenanceService {
         const result = await performJudgement({
           topicId: t.topic_id,
           topicTitle: t.title,
-          proComments: pro.rows,
-          conComments: con.rows,
+          proComments: pro,
+          conComments: con,
           broadcast: (judgeResult) => {
             io.to(`battle:${t.topic_id}`).emit('battle_update', {
               pro_score: judgeResult.pro_score,
@@ -283,8 +253,9 @@ class AutoMaintenanceService {
              WHERE tq.topic_id = t.topic_id AND tq.is_featured = true
           )
         GROUP BY t.topic_id, t.title, t.pro_stance, t.con_stance
-       HAVING COUNT(c.comment_id) >= ${QUOTE_MIN_COMMENTS}
-        ORDER BY cnt DESC`
+       HAVING COUNT(c.comment_id) >= $1
+        ORDER BY cnt DESC`,
+      [QUOTE_MIN_COMMENTS]
     );
     const topics = r.rows;
     if (topics.length === 0) {
@@ -309,7 +280,8 @@ class AutoMaintenanceService {
           [t.topic_id]
         );
 
-        const quotes = await aiService.extractQuotes({
+        const quotes = await extractAndSaveFeaturedQuotes({
+          topicId: t.topic_id,
           topicTitle: t.title,
           proStance: t.pro_stance,
           conStance: t.con_stance,
@@ -322,8 +294,6 @@ class AutoMaintenanceService {
           return;
         }
 
-        await this.saveQuotes(t.topic_id, quotes);
-        await redisClient.setFeaturedQuotes(t.topic_id, quotes, 600);
         processed++;
         totalQuotes += quotes.length;
         console.log(`${tag} ✅ saved ${quotes.length} quotes`);
@@ -334,25 +304,6 @@ class AutoMaintenanceService {
     });
 
     return { processed, failed, totalQuotes };
-  }
-
-  private async saveQuotes(
-    topicId: string,
-    quotes: Array<{ content: string; stance: 'pro' | 'con' }>
-  ): Promise<void> {
-    if (quotes.length === 0) return;
-    await db.query(`UPDATE topic_quotes SET is_featured = false WHERE topic_id = $1`, [topicId]);
-    const placeholders: string[] = [];
-    const params: any[] = [topicId];
-    quotes.forEach((q, i) => {
-      placeholders.push(`($1, $${i * 2 + 2}, $${i * 2 + 3}, true, 'llm')`);
-      params.push(q.content, q.stance);
-    });
-    await db.query(
-      `INSERT INTO topic_quotes (topic_id, content, stance, is_featured, generated_by)
-       VALUES ${placeholders.join(', ')}`,
-      params
-    );
   }
 
   /* ────────────────── Cron 调度 ────────────────── */

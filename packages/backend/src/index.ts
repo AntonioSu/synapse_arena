@@ -8,6 +8,7 @@ import { db } from './db/client';
 import { redisClient } from './services/redis-client';
 import { topicCrawler } from './services/topic-crawler';
 import { autoMaintenance } from './services/auto-maintenance';
+import { butterflyEffect } from './services/butterfly-effect';
 
 // Routes
 import topicsRouter from './routes/topics';
@@ -84,6 +85,9 @@ const startServer = async () => {
     await redisClient.getClient().ping();
     console.log('✅ Redis connected');
 
+    // 显式启动 BullMQ worker，避免 import 副作用造成脚本/路由把 worker 拖起来。
+    butterflyEffect.init();
+
     // Start topic crawler cron job
     topicCrawler.startCronJob();
 
@@ -106,6 +110,7 @@ const startServer = async () => {
 process.on('SIGTERM', async () => {
   console.log('SIGTERM signal received: closing HTTP server');
   httpServer.close(async () => {
+    try { await butterflyEffect.close(); } catch (e) { console.error('butterfly close error', e); }
     await db.close();
     await redisClient.close();
     console.log('HTTP server closed');

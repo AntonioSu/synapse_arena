@@ -156,6 +156,14 @@ router.post('/zhihu/callback', asyncHandler(async (req, res) => {
     throw err;
   }
 
+  if (userInfo.uid === undefined || userInfo.uid === null || userInfo.uid === '') {
+    // 拒绝拿空 uid 落库，避免所有异常请求被合并到同一个 secondme_id='undefined' 用户。
+    const err: any = new Error('Zhihu user info missing uid');
+    err.status = 400;
+    err.detail = userInfo;
+    throw err;
+  }
+
   const zhihuId = String(userInfo.uid);
   const username = userInfo.fullname || `zhihu_${zhihuId}`;
   const avatarUrl = userInfo.avatar_path || '';
